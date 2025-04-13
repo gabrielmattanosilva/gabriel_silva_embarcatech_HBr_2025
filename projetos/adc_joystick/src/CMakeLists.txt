@@ -28,38 +28,37 @@ set(PICO_BOARD pico_w CACHE STRING "Board type")
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
 
-project(temp_interna_RP2040 C CXX ASM)
+project(adc_joystick C CXX ASM)
 
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
-add_executable(temp_interna_RP2040)
+add_executable(adc_joystick)
 
-pico_set_program_name(temp_interna_RP2040 "temp_interna_RP2040")
-pico_set_program_version(temp_interna_RP2040 "0.1")
+pico_set_program_name(adc_joystick "adc_joystick")
+pico_set_program_version(adc_joystick "0.1")
 
 # Add source codes to the executable.
-target_sources(temp_interna_RP2040 PRIVATE
+target_sources(adc_joystick PRIVATE
     main.c
 )
 
 # Modify the below lines to enable/disable output over UART/USB
-pico_enable_stdio_uart(temp_interna_RP2040 0)
-pico_enable_stdio_usb(temp_interna_RP2040 1)
+pico_enable_stdio_uart(adc_joystick 0)
+pico_enable_stdio_usb(adc_joystick 1)
 
 # Add the standard library to the build
-target_link_libraries(temp_interna_RP2040
-    pico_stdlib
-    hardware_adc)
+target_link_libraries(adc_joystick
+    pico_stdlib)
 
 # Add the standard include files to the build
-target_include_directories(temp_interna_RP2040 PRIVATE
-    ${CMAKE_CURRENT_LIST_DIR}
+target_include_directories(adc_joystick PRIVATE
+    ${CMAKE_CURRENT_LIST_DIR}/inc
 )
 
 # Add any user requested libraries
-target_link_libraries(temp_interna_RP2040
+target_link_libraries(adc_joystick
     )
 
-pico_add_extra_outputs(temp_interna_RP2040)
+pico_add_extra_outputs(adc_joystick)
