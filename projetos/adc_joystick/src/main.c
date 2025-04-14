@@ -35,6 +35,7 @@ int main()
 {
     uint16_t x_value, y_value;
     setup();
+    
     while (1)
     {
         joystick_read_axis(&x_value, &y_value);

@@ -13,12 +13,22 @@ float adc_to_temperature(uint16_t adc_value)
     return temperature;
 }
 
-int main()
+void setup_adc()
 {
-    stdio_init_all();
     adc_init();
     adc_set_temp_sensor_enabled(true);
     adc_select_input(ADC_TEMPERATURE_CHANNEL);
+}
+
+void setup()
+{
+    stdio_init_all();
+    setup_adc();
+}
+
+int main()
+{
+    setup();
 
     while (true)
     {
