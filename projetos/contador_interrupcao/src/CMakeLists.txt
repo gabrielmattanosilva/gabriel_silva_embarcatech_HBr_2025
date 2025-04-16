@@ -42,7 +42,8 @@ pico_set_program_version(contador_interrupcao "0.1")
 # Add source codes to the executable.
 target_sources(contador_interrupcao PRIVATE
     main.c
-	inc/ssd1306_i2c.c
+    inc/ssd1306_i2c.c
+    inc/interrupt_counter.c
 )
 
 # Modify the below lines to enable/disable output over UART/USB
