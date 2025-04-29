@@ -1,37 +1,12 @@
 #include <stdio.h>
 #include "hardware/adc.h"
 #include "pico/stdlib.h"
+#include "internal_temperature.h"
 
-#define ADC_TEMPERATURE_CHANNEL 4
+int main() {
+    setup_temperature_sensor();
 
-// Função que converte o valor lido do ADC (valor digital de 12 bits) para a temperatura em graus Celsius
-float adc_to_celsius(uint16_t adc_value)
-{
-    const float conversion_factor = 3.3f / (1 << 12);               // Fator de conversão de 12 bits (0-4095) para o intervalo de 0-3.3V
-    float adc_voltage = adc_value * conversion_factor;              // Converte o valor do ADC para tensão
-    float temperature = 27.0f - (adc_voltage - 0.706f) / 0.001721f; // Fórmula fornecida no datasheet para conversão em Celsius
-    return temperature;
-}
-
-void setup_adc()
-{
-    adc_init();
-    adc_set_temp_sensor_enabled(true);
-    adc_select_input(ADC_TEMPERATURE_CHANNEL);
-}
-
-void setup()
-{
-    stdio_init_all();
-    setup_adc();
-}
-
-int main()
-{
-    setup();
-
-    while (true)
-    {
+    while (true) {
         uint16_t adc_value = adc_read();
         float temperature = adc_to_celsius(adc_value);
         printf("Temperatura: %.2f °C\n", temperature);

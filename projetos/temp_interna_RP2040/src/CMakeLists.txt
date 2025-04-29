@@ -42,6 +42,7 @@ pico_set_program_version(temp_interna_RP2040 "0.1")
 # Add source codes to the executable.
 target_sources(temp_interna_RP2040 PRIVATE
     main.c
+    inc/internal_temperature.c
 )
 
 # Modify the below lines to enable/disable output over UART/USB
@@ -55,7 +56,7 @@ target_link_libraries(temp_interna_RP2040
 
 # Add the standard include files to the build
 target_include_directories(temp_interna_RP2040 PRIVATE
-    ${CMAKE_CURRENT_LIST_DIR}
+    ${CMAKE_CURRENT_LIST_DIR}/inc
 )
 
 # Add any user requested libraries
