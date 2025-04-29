@@ -5,7 +5,7 @@
 #define ADC_TEMPERATURE_CHANNEL 4
 
 // Função que converte o valor lido do ADC (valor digital de 12 bits) para a temperatura em graus Celsius
-float adc_to_temperature(uint16_t adc_value)
+float adc_to_celsius(uint16_t adc_value)
 {
     const float conversion_factor = 3.3f / (1 << 12);               // Fator de conversão de 12 bits (0-4095) para o intervalo de 0-3.3V
     float adc_voltage = adc_value * conversion_factor;              // Converte o valor do ADC para tensão
@@ -33,7 +33,7 @@ int main()
     while (true)
     {
         uint16_t adc_value = adc_read();
-        float temperature = adc_to_temperature(adc_value);
+        float temperature = adc_to_celsius(adc_value);
         printf("Temperatura: %.2f °C\n", temperature);
         sleep_ms(1000);
     }
