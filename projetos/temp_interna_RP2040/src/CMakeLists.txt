@@ -33,6 +33,8 @@ project(temp_interna_RP2040 C CXX ASM)
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
+add_subdirectory(lib)
+
 # Add executable. Default name is the project name, version 0.1
 add_executable(temp_interna_RP2040)
 
@@ -64,3 +66,7 @@ target_link_libraries(temp_interna_RP2040
     )
 
 pico_add_extra_outputs(temp_interna_RP2040)
+
+# Add unit tests
+enable_testing()
+add_subdirectory(tests)
