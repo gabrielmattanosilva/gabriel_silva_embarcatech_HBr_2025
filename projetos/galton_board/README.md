@@ -1,0 +1,1 @@
+Template para projetos usando o Raspberry Pi Pico W.
