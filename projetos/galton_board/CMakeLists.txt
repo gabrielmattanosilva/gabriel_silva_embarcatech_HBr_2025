@@ -16,7 +16,7 @@ else()
     set(USERHOME $ENV{HOME})
 endif()
 set(sdkVersion 1.5.1)
-set(toolchainVersion 13_3_Rel1)
+set(toolchainVersion 13_2_Rel1)
 set(picotoolVersion 2.0.0)
 set(picoVscode ${USERHOME}/.pico-sdk/cmake/pico-vscode.cmake)
 if (EXISTS ${picoVscode})
@@ -28,39 +28,41 @@ set(PICO_BOARD pico_w CACHE STRING "Board type")
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
 
-project(galton_board C CXX ASM)
+project(lab-01-galton-board C CXX ASM)
 
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
-add_executable(galton_board)
 
-pico_set_program_name(galton_board "galton_board")
-pico_set_program_version(galton_board "0.1")
-
-# Add source codes to the executable.
-target_sources(galton_board PRIVATE
-    main.c
-    inc/ssd1306_i2c.c
+add_executable(lab-01-galton-board
+  ./src/main.c
+  ./include/ssd1306_i2c.c
+  ./include/display.c
+  ./include/galton_board.c
 )
 
+pico_set_program_name(lab-01-galton-board "lab-01-galton-board")
+pico_set_program_version(lab-01-galton-board "0.1")
+
 # Modify the below lines to enable/disable output over UART/USB
-pico_enable_stdio_uart(galton_board 0)
-pico_enable_stdio_usb(galton_board 1)
+pico_enable_stdio_uart(lab-01-galton-board 0)
+pico_enable_stdio_usb(lab-01-galton-board 1)
 
 # Add the standard library to the build
-target_link_libraries(galton_board
-    pico_stdlib
-    hardware_i2c)
+target_link_libraries(lab-01-galton-board
+        pico_stdlib)
 
 # Add the standard include files to the build
-target_include_directories(galton_board PRIVATE
-    ${CMAKE_CURRENT_LIST_DIR}/inc
+target_include_directories(lab-01-galton-board PRIVATE
+        ${CMAKE_CURRENT_LIST_DIR}
+        ./include
 )
 
 # Add any user requested libraries
-target_link_libraries(galton_board
-    )
+target_link_libraries(lab-01-galton-board
+        hardware_i2c
+        )
 
-pico_add_extra_outputs(galton_board)
+pico_add_extra_outputs(lab-01-galton-board)
+
