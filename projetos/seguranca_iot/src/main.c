@@ -5,12 +5,18 @@
 #include "pico/stdlib.h"
 #include "include/credentials.h"
 #include "include/wifi_conn.h"
+#include "include/mqtt_conn.h"
+
+#define CLIENT_ID "bitdog"
+#define BROKER_IP "192.168.1.104"
 
 int main() {
     stdio_init_all();  // Inicializa a saída padrão
     sleep_ms(1000);
-
     connect_to_wifi(WIFI_SSID, WIFI_PASS);
+    mqtt_setup(CLIENT_ID, BROKER_IP, NULL, NULL);
+    sleep_ms(1000); // Delay para estabilizar conexão
+    mqtt_comm_publish("escola/sala1/temperatura", "26.5", strlen("26.5"));
 
     // Loop principal
     while (true) {

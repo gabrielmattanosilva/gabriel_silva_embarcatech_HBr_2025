@@ -1,5 +1,5 @@
 #include "lwip/apps/mqtt.h"    // Biblioteca MQTT do lwIP
-#include "include/mqtt_comm.h" // Header file com as declarações locais
+#include "include/mqtt_conn.h" // Header file com as declarações locais
 // Base: https://github.com/BitDogLab/BitDogLab-C/blob/main/wifi_button_and_led/lwipopts.h
 #include "lwipopts.h" // Configurações customizadas do lwIP
 

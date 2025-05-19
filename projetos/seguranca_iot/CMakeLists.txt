@@ -38,6 +38,7 @@ pico_sdk_init()
 add_executable(seguranca_iot
   ./src/main.c
   ./include/wifi_conn.c
+  ./include/mqtt_conn.c
 )
 
 pico_set_program_name(seguranca_iot "seguranca_iot")
@@ -59,7 +60,9 @@ target_include_directories(seguranca_iot PRIVATE
 
 # Add any user requested libraries
 target_link_libraries(seguranca_iot
-        pico_cyw43_arch_lwip_threadsafe_background)
+        pico_cyw43_arch_lwip_threadsafe_background
+        pico_lwip
+        pico_lwip_mqtt)
 
 pico_add_extra_outputs(seguranca_iot)
 
