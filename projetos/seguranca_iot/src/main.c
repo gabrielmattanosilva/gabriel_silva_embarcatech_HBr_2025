@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdio.h>
+#include <time.h>
 
 #include "pico/cyw43_arch.h"
 #include "pico/stdlib.h"
@@ -18,18 +19,20 @@ int main() {
     connect_to_wifi(WIFI_SSID, WIFI_PASS);
     mqtt_setup(CLIENT_ID, BROKER_IP, USER, BROKER_PASS);
     sleep_ms(1000); // Delay para estabilizar conexão
-
+    
     // Mensagem original a ser enviada
-    const char *mensagem = "26.5";
+    char mensagem[64];
+    sprintf(mensagem, "{\"valor\":26.5,\"ts\":%lu}", time(NULL));
+    size_t msg_len = strlen(mensagem);
 
     // Buffer para mensagem criptografada (16 bytes)
-    uint8_t criptografada[16];
+    uint8_t criptografada[64];
     
     // Criptografa a mensagem usando XOR com chave 42
-    xor_encrypt((uint8_t *)mensagem, criptografada, strlen(mensagem), 42);
+    xor_encrypt((uint8_t *)mensagem, criptografada, msg_len, 42);
 
     // Publica a mensagem criptografada
-    mqtt_comm_publish("escola/sala1/temperatura", criptografada, strlen(mensagem));
+    mqtt_comm_publish("escola/sala1/temperatura", criptografada, msg_len);
 
     // Loop principal
     while (true) {
