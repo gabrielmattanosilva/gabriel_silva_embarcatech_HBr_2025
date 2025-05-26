@@ -18,7 +18,18 @@ int main() {
     connect_to_wifi(WIFI_SSID, WIFI_PASS);
     mqtt_setup(CLIENT_ID, BROKER_IP, USER, BROKER_PASS);
     sleep_ms(1000); // Delay para estabilizar conexão
-    mqtt_comm_publish("escola/sala1/temperatura", "26.5", strlen("26.5"));
+
+    // Mensagem original a ser enviada
+    const char *mensagem = "26.5";
+
+    // Buffer para mensagem criptografada (16 bytes)
+    uint8_t criptografada[16];
+    
+    // Criptografa a mensagem usando XOR com chave 42
+    xor_encrypt((uint8_t *)mensagem, criptografada, strlen(mensagem), 42);
+
+    // Publica a mensagem criptografada
+    mqtt_comm_publish("escola/sala1/temperatura", criptografada, strlen(mensagem));
 
     // Loop principal
     while (true) {
