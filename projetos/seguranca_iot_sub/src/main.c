@@ -12,6 +12,7 @@
 #define BROKER_IP   "192.168.3.196"
 #define USER        "aluno"
 #define BROKER_PASS "bitdoglab"
+#define TOPIC       "escola/sala1/temperatura"
 
 int main() {
     stdio_init_all();  // Inicializa a saída padrão
@@ -20,20 +21,9 @@ int main() {
     mqtt_setup(CLIENT_ID, BROKER_IP, USER, BROKER_PASS);
     sleep_ms(1000); // Delay para estabilizar conexão
     
-    // Mensagem original a ser enviada
-    char mensagem[64];
-    sprintf(mensagem, "{\"valor\":26.5,\"ts\":%lu}", time(NULL));
-    size_t msg_len = strlen(mensagem);
-
-    // Buffer para mensagem criptografada (16 bytes)
-    uint8_t criptografada[64];
+    // Subscreve ao tópico
+    mqtt_comm_subscribe(TOPIC);
     
-    // Criptografa a mensagem usando XOR com chave 42
-    xor_encrypt((uint8_t *)mensagem, criptografada, msg_len, 42);
-
-    // Publica a mensagem criptografada
-    mqtt_comm_publish("escola/sala1/temperatura", criptografada, msg_len);
-
     // Loop principal
     while (true) {
         cyw43_arch_poll();  // Necessário para manter o Wi-Fi ativo

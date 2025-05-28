@@ -7,6 +7,9 @@
  * 'static' limita o escopo deste arquivo */
 static mqtt_client_t *client;
 
+/* Variável global para armazenar o último timestamp recebido */
+static uint32_t ultima_timestamp_recebida = 0;
+
 /* Callback de conexão MQTT - chamado quando o status da conexão muda
  * Parâmetros:
  *   - client: instância do cliente MQTT
@@ -111,22 +114,84 @@ void mqtt_comm_publish(const char *topic, const uint8_t *data, size_t len)
 
 /**
  * Função para aplicar cifra XOR (criptografia/decifração)
- * 
+ *
  * @param input  Ponteiro para os dados de entrada (texto claro ou cifrado)
  * @param output Ponteiro para armazenar o resultado (deve ter tamanho >= len)
  * @param len    Tamanho dos dados em bytes
  * @param key    Chave de 1 byte (0-255) para operação XOR
- * 
+ *
  * Funcionamento:
  * - Aplica operação XOR bit-a-bit entre cada byte do input e a chave
  * - XOR é reversível: mesma função para cifrar e decifrar
  * - Criptografia fraca (apenas para fins didáticos ou ofuscação básica)
  */
-void xor_encrypt(const uint8_t *input, uint8_t *output, size_t len, uint8_t key) {
+void xor_encrypt(const uint8_t *input, uint8_t *output, size_t len, uint8_t key)
+{
     // Loop por todos os bytes dos dados de entrada
-    for (size_t i = 0; i < len; ++i) {
+    for (size_t i = 0; i < len; ++i)
+    {
         // Operação XOR entre o byte atual e a chave
         // Armazena resultado no buffer de saída
         output[i] = input[i] ^ key;
+    }
+}
+
+/* Callback para requisição de subscrição */
+static void mqtt_sub_request_cb(void *arg, err_t result)
+{
+    if (result == ERR_OK)
+    {
+        printf("Subscrição realizada com sucesso!\n");
+    }
+    else
+    {
+        printf("Erro na subscrição: %d\n", result);
+    }
+}
+
+/* Callback para mensagens recebidas */
+static void mqtt_incoming_publish_cb(void *arg, const char *topic, u32_t tot_len)
+{
+    printf("Mensagem recebida no tópico: %s\n", topic);
+}
+
+/* Callback para dados recebidos */
+static void mqtt_incoming_data_cb(void *arg, const u8_t *data, u16_t len, u8_t flags)
+{
+    printf("Dados recebidos: %.*s\n", len, (const char *)data);
+    
+    // 1. Parse da mensagem JSON
+    uint32_t nova_timestamp;
+    float valor;
+    if (sscanf((const char *)data, "{\"valor\":%f,\"ts\":%lu}", &valor, &nova_timestamp) != 2)
+    {
+        printf("Erro no parse da mensagem!\n");
+        return;
+    }
+    
+    // 2. Verificação de replay
+    if (nova_timestamp > ultima_timestamp_recebida)
+    {
+        ultima_timestamp_recebida = nova_timestamp;
+        printf("Nova leitura válida: %.2f (ts: %lu)\n", valor, nova_timestamp);
+    }
+    else
+    {
+        printf("Replay detectado (ts: %lu <= %lu)\n", nova_timestamp, ultima_timestamp_recebida);
+    }
+}
+
+/* Função para subscrever a um tópico */
+void mqtt_comm_subscribe(const char *topic)
+{
+    // Configura os callbacks de publicação e dados
+    mqtt_set_inpub_callback(client, mqtt_incoming_publish_cb, mqtt_incoming_data_cb, NULL);
+    
+    // Subscrição com o callback de requisição
+    err_t err = mqtt_subscribe(client, topic, 0, mqtt_sub_request_cb, NULL);
+    
+    if (err != ERR_OK)
+    {
+        printf("Erro ao subscrever no tópico %s: %d\n", topic, err);
     }
 }
