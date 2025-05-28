@@ -1,0 +1,4 @@
+build/
+.vscode/
+include/credentials.h
+seguranca_iot.txt

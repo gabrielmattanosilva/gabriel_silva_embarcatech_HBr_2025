@@ -28,41 +28,41 @@ set(PICO_BOARD pico_w CACHE STRING "Board type")
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
 
-project(seguranca_iot C CXX ASM)
+project(seguranca_iot_sub C CXX ASM)
 
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(seguranca_iot
+add_executable(seguranca_iot_sub
   ./src/main.c
   ./include/wifi_conn.c
   ./include/mqtt_conn.c
 )
 
-pico_set_program_name(seguranca_iot "seguranca_iot")
-pico_set_program_version(seguranca_iot "0.1")
+pico_set_program_name(seguranca_iot_sub "seguranca_iot_sub")
+pico_set_program_version(seguranca_iot_sub "0.1")
 
 # Modify the below lines to enable/disable output over UART/USB
-pico_enable_stdio_uart(seguranca_iot 0)
-pico_enable_stdio_usb(seguranca_iot 1)
+pico_enable_stdio_uart(seguranca_iot_sub 0)
+pico_enable_stdio_usb(seguranca_iot_sub 1)
 
 # Add the standard library to the build
-target_link_libraries(seguranca_iot
+target_link_libraries(seguranca_iot_sub
         pico_stdlib)
 
 # Add the standard include files to the build
-target_include_directories(seguranca_iot PRIVATE
+target_include_directories(seguranca_iot_sub PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
         ./include
 )
 
 # Add any user requested libraries
-target_link_libraries(seguranca_iot
+target_link_libraries(seguranca_iot_sub
         pico_cyw43_arch_lwip_threadsafe_background
         pico_lwip
         pico_lwip_mqtt)
 
-pico_add_extra_outputs(seguranca_iot)
+pico_add_extra_outputs(seguranca_iot_sub)
 

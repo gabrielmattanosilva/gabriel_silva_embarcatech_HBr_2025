@@ -12,6 +12,8 @@ Campinas, 19 de Maio de 2025
 
 Roteiro Prático – Segurança em IoT com BitDogLab (C/C++)
 
+Código para a BitDogLab publisher.
+
 ---
 
 ## 📜 Licença
