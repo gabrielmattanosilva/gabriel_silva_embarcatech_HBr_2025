@@ -39,6 +39,7 @@ add_executable(seguranca_iot_pub
   ./src/main.c
   ./include/wifi_conn.c
   ./include/mqtt_conn.c
+  ./include/internal_temperature.c
 )
 
 pico_set_program_name(seguranca_iot_pub "seguranca_iot_pub")
@@ -62,7 +63,8 @@ target_include_directories(seguranca_iot_pub PRIVATE
 target_link_libraries(seguranca_iot_pub
         pico_cyw43_arch_lwip_threadsafe_background
         pico_lwip
-        pico_lwip_mqtt)
+        pico_lwip_mqtt
+        hardware_adc)
 
 pico_add_extra_outputs(seguranca_iot_pub)
 

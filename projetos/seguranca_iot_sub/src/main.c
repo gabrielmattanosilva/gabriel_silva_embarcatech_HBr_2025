@@ -8,17 +8,15 @@
 #include "include/wifi_conn.h"
 #include "include/mqtt_conn.h"
 
-#define CLIENT_ID   "bitdog1"
+#define CLIENT_ID   "bitdog2"
 #define BROKER_IP   "192.168.3.196"
-#define USER        "aluno"
-#define BROKER_PASS "bitdoglab"
 #define TOPIC       "escola/sala1/temperatura"
 
 int main() {
     stdio_init_all();  // Inicializa a saída padrão
     sleep_ms(1000);
     connect_to_wifi(WIFI_SSID, WIFI_PASS);
-    mqtt_setup(CLIENT_ID, BROKER_IP, USER, BROKER_PASS);
+    mqtt_setup(CLIENT_ID, BROKER_IP, BROKER_USER, BROKER_PASS);
     sleep_ms(1000); // Delay para estabilizar conexão
     
     // Subscreve ao tópico

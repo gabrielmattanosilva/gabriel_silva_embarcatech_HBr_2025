@@ -37,8 +37,8 @@ pico_sdk_init()
 
 add_executable(seguranca_iot_sub
   ./src/main.c
-  ./include/wifi_conn.c
   ./include/mqtt_conn.c
+  ./include/wifi_conn.c
 )
 
 pico_set_program_name(seguranca_iot_sub "seguranca_iot_sub")

@@ -158,12 +158,19 @@ static void mqtt_incoming_publish_cb(void *arg, const char *topic, u32_t tot_len
 /* Callback para dados recebidos */
 static void mqtt_incoming_data_cb(void *arg, const u8_t *data, u16_t len, u8_t flags)
 {
-    printf("Dados recebidos: %.*s\n", len, (const char *)data);
+    // Buffer para armazenar os dados decodificados
+    uint8_t decodificado[256];
+    
+    // Decodifica os dados usando XOR com a chaveb42
+    xor_encrypt(data, decodificado, len, 42);
+    
+    printf("Dados recebidos (criptografados): %.*s\n", len, (const char *)data);
+    printf("Dados decodificados: %.*s\n", len, (const char *)decodificado);
     
     // 1. Parse da mensagem JSON
     uint32_t nova_timestamp;
     float valor;
-    if (sscanf((const char *)data, "{\"valor\":%f,\"ts\":%lu}", &valor, &nova_timestamp) != 2)
+    if (sscanf((const char *)decodificado, "{\"valor\":%f,\"ts\":%lu}", &valor, &nova_timestamp) != 2)
     {
         printf("Erro no parse da mensagem!\n");
         return;
