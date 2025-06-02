@@ -4,6 +4,15 @@ def concatenate_c_h_files_in_lib_src(base_dir="."):
     target_dirs = ["include", "lib", "src"]
     concatenated_files = []
 
+    # First add the CMakeLists.txt from root if it exists
+    cmake_path = os.path.join(base_dir, "CMakeLists.txt")
+    if os.path.isfile(cmake_path):
+        with open(cmake_path, "r", encoding="utf-8") as f:
+            content = f.read()
+            header = f"\n/********** {os.path.relpath(cmake_path, base_dir)} **********/\n\n"
+            concatenated_files.append(header + content)
+
+    # Then process the other directories as before
     for folder in target_dirs:
         full_path = os.path.join(base_dir, folder)
         if not os.path.isdir(full_path):
