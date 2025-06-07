@@ -3,137 +3,208 @@
 #include "pico/stdlib.h"
 #include "hardware/adc.h"
 #include "hardware/dma.h"
+#include "hardware/pwm.h"
+#include "hardware/gpio.h"
 
-// Pino e canal do microfone no ADC.
+// Configurações do microfone
 #define MIC_CHANNEL 2
 #define MIC_PIN (26 + MIC_CHANNEL)
+#define SAMPLE_RATE 16000 // 16 kHz
+#define RECORD_TIME 2     // segundos
+#define SAMPLES (SAMPLE_RATE * RECORD_TIME)
 
-// Parâmetros e macros do ADC.
-#define ADC_CLOCK_DIV 96.f
-#define SAMPLES 200 // Número de amostras que serão feitas do ADC.
-#define ADC_ADJUST(x) (x * 3.3f / (1 << 12u) - 1.65f) // Ajuste do valor do ADC para Volts.
-#define ADC_MAX 3.3f
-#define ADC_STEP (3.3f/5.f) // Intervalos de volume do microfone.
+// Configurações do PWM (reprodução)
+#define PWM_PIN 10
+#define PWM_FREQ SAMPLE_RATE            // Frequência igual à taxa de amostragem
+#define PWM_WRAP (125000000 / PWM_FREQ) // Para 16kHz: 7812
 
-#define abs(x) ((x < 0) ? (-x) : (x))
+// Botões
+#define BTN_RECORD 5
+#define BTN_PLAY 6
 
-// Canal e configurações do DMA
+// LEDs
+#define LED_RECORD 13
+#define LED_PLAY 11
+
+// Buffer de amostras do ADC
+uint16_t audio_buffer[SAMPLES];
+volatile bool recording = false;
+volatile bool playing = false;
+volatile uint32_t sample_pos = 0;
+
+// Configurações do DMA
 uint dma_channel;
 dma_channel_config dma_cfg;
 
-// Buffer de amostras do ADC.
-uint16_t adc_buffer[SAMPLES];
+// Configurações do PWM
+uint pwm_slice;
 
-void sample_mic();
-float mic_power();
-uint8_t get_intensity(float v);
+void init_hardware();
+void start_recording();
+void play_audio();
+void gpio_callback();
 
-int main() {
-  stdio_init_all();
+int main()
+{
+    stdio_init_all();
+    init_hardware();
 
-  // Delay para o usuário abrir o monitor serial...
-  sleep_ms(5000);
+    sleep_ms(1000);
 
-  // Preparação do ADC.
-  printf("Preparando ADC...\n");
+    printf("Sintetizador de Áudio - Pronto\n");
 
-  adc_gpio_init(MIC_PIN);
-  adc_init();
-  adc_select_input(MIC_CHANNEL);
+    while (true)
+    {
+        if (recording)
+        {
+            start_recording();
+            recording = false;
+        }
 
-  adc_fifo_setup(
-    true, // Habilitar FIFO
-    true, // Habilitar request de dados do DMA
-    1, // Threshold para ativar request DMA é 1 leitura do ADC
-    false, // Não usar bit de erro
-    false // Não fazer downscale das amostras para 8-bits, manter 12-bits.
-  );
+        if (playing)
+        {
+            play_audio();
+            playing = false;
+        }
 
-  adc_set_clkdiv(ADC_CLOCK_DIV);
-
-  printf("ADC Configurado!\n\n");
-
-  printf("Preparando DMA...");
-
-  // Tomando posse de canal do DMA.
-  dma_channel = dma_claim_unused_channel(true);
-
-  // Configurações do DMA.
-  dma_cfg = dma_channel_get_default_config(dma_channel);
-
-  channel_config_set_transfer_data_size(&dma_cfg, DMA_SIZE_16); // Tamanho da transferência é 16-bits (usamos uint16_t para armazenar valores do ADC)
-  channel_config_set_read_increment(&dma_cfg, false); // Desabilita incremento do ponteiro de leitura (lemos de um único registrador)
-  channel_config_set_write_increment(&dma_cfg, true); // Habilita incremento do ponteiro de escrita (escrevemos em um array/buffer)
-  
-  channel_config_set_dreq(&dma_cfg, DREQ_ADC); // Usamos a requisição de dados do ADC
-
-  // Amostragem de teste.
-  printf("Amostragem de teste...\n");
-  sample_mic();
-
-
-  printf("Configuracoes completas!\n");
-
-  printf("\n----\nIniciando loop...\n----\n");
-  while (true) {
-
-    // Realiza uma amostragem do microfone.
-    sample_mic();
-
-    // Pega a potência média da amostragem do microfone.
-    float avg = mic_power();
-    avg = 2.f * abs(ADC_ADJUST(avg)); // Ajusta para intervalo de 0 a 3.3V. (apenas magnitude, sem sinal)
-
-    uint intensity = get_intensity(avg); // Calcula intensidade a ser mostrada na matriz de LEDs.
-
-    // Envia a intensidade e a média das leituras do ADC por serial.
-    printf("%2d %8.4f\n", intensity, avg);
-  }
+        sleep_ms(10);
+    }
 }
 
-/**
- * Realiza as leituras do ADC e armazena os valores no buffer.
- */
-void sample_mic() {
-  adc_fifo_drain(); // Limpa o FIFO do ADC.
-  adc_run(false); // Desliga o ADC (se estiver ligado) para configurar o DMA.
+void init_hardware()
+{
+    // Configuração do ADC
+    adc_gpio_init(MIC_PIN);
+    adc_init();
+    adc_select_input(MIC_CHANNEL);
+    adc_fifo_setup(true, true, 1, false, false);
+    adc_set_clkdiv(48000000.0f / SAMPLE_RATE - 1); // Configura taxa de amostragem
 
-  dma_channel_configure(dma_channel, &dma_cfg,
-    adc_buffer, // Escreve no buffer.
-    &(adc_hw->fifo), // Lê do ADC.
-    SAMPLES, // Faz SAMPLES amostras.
-    true // Liga o DMA.
-  );
+    // Configuração do DMA
+    dma_channel = dma_claim_unused_channel(true);
+    dma_cfg = dma_channel_get_default_config(dma_channel);
+    channel_config_set_transfer_data_size(&dma_cfg, DMA_SIZE_16);
+    channel_config_set_read_increment(&dma_cfg, false);
+    channel_config_set_write_increment(&dma_cfg, true);
+    channel_config_set_dreq(&dma_cfg, DREQ_ADC);
 
-  // Liga o ADC e espera acabar a leitura.
-  adc_run(true);
-  dma_channel_wait_for_finish_blocking(dma_channel);
-  
-  // Acabou a leitura, desliga o ADC de novo.
-  adc_run(false);
+    // Configuração do PWM
+    gpio_set_function(PWM_PIN, GPIO_FUNC_PWM);
+    pwm_slice = pwm_gpio_to_slice_num(PWM_PIN);
+    pwm_config config = pwm_get_default_config();
+    pwm_config_set_wrap(&config, PWM_WRAP);
+    pwm_config_set_clkdiv(&config, 1.f); // Sem divisão de clock
+    pwm_init(pwm_slice, &config, false);
+
+    // Configuração dos botões
+    gpio_init(BTN_RECORD);
+    gpio_init(BTN_PLAY);
+    gpio_set_dir(BTN_RECORD, GPIO_IN);
+    gpio_set_dir(BTN_PLAY, GPIO_IN);
+    gpio_pull_up(BTN_RECORD);
+    gpio_pull_up(BTN_PLAY);
+
+    // Configura interrupções para os botões
+    gpio_set_irq_enabled_with_callback(BTN_RECORD, GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
+    gpio_set_irq_enabled_with_callback(BTN_PLAY, GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
+
+    // Configuração dos LEDs
+    gpio_init(LED_RECORD);
+    gpio_init(LED_PLAY);
+    gpio_set_dir(LED_RECORD, GPIO_OUT);
+    gpio_set_dir(LED_PLAY, GPIO_OUT);
 }
 
-/**
- * Calcula a potência média das leituras do ADC. (Valor RMS)
- */
-float mic_power() {
-  float avg = 0.f;
+void start_recording()
+{
+    printf("Iniciando gravação...\n");
+    gpio_put(LED_RECORD, 1);
+    gpio_put(LED_PLAY, 0);
 
-  for (uint i = 0; i < SAMPLES; ++i)
-    avg += adc_buffer[i] * adc_buffer[i];
-  
-  avg /= SAMPLES;
-  return sqrt(avg);
+    adc_fifo_drain();
+    adc_run(false);
+
+    dma_channel_configure(dma_channel, &dma_cfg,
+                          audio_buffer,
+                          &(adc_hw->fifo),
+                          SAMPLES,
+                          true);
+
+    adc_run(true);
+    dma_channel_wait_for_finish_blocking(dma_channel);
+    adc_run(false);
+
+    printf("Gravação concluída!\n");
+    gpio_put(LED_RECORD, 0);
 }
 
-/**
- * Calcula a intensidade do volume registrado no microfone, de 0 a 4, usando a tensão.
- */
-uint8_t get_intensity(float v) {
-  uint count = 0;
+void play_audio()
+{
+    printf("Reproduzindo áudio...\n");
+    gpio_put(LED_RECORD, 0);
+    gpio_put(LED_PLAY, 1);
 
-  while ((v -= ADC_STEP/20) > 0.f)
-    ++count;
-  
-  return count;
+    for (uint32_t i = 1; i < SAMPLES; i++)
+    {
+        audio_buffer[i] = audio_buffer[i] + 0.7f * (audio_buffer[i] - audio_buffer[i - 1]);
+    }
+
+    // Encontra o valor máximo no buffer para normalização
+    uint16_t max_val = 0;
+    for (uint32_t i = 0; i < SAMPLES; i++)
+    {
+        if (audio_buffer[i] > max_val)
+        {
+            max_val = audio_buffer[i];
+        }
+    }
+
+    // Fator de amplificação (ajuste conforme necessário)
+    float gain = 2.0f; // Aumenta o ganho em 2x
+    if (max_val > 0)
+    {
+        gain = (4095.0f / max_val) * 1.5f; // Auto-ajuste com margem de 1.5x
+    }
+
+    printf("Ganho aplicado: %.2f\n", gain);
+
+    pwm_set_enabled(pwm_slice, true);
+
+    for (uint32_t i = 0; i < SAMPLES; i++)
+    {
+        // Aplica ganho e limita ao máximo de 12 bits
+        uint16_t amplified = (uint16_t)(audio_buffer[i] * gain);
+        if (amplified > 4095)
+            amplified = 4095;
+
+        // Converte para valor PWM (12 bits -> 16 bits, usando todo o range do PWM)
+        uint16_t pwm_val = (amplified * PWM_WRAP) / 4095;
+        pwm_set_chan_level(pwm_slice, PWM_CHAN_A, pwm_val);
+        sleep_us(1000000 / SAMPLE_RATE);
+    }
+
+    pwm_set_enabled(pwm_slice, false);
+    printf("Reprodução concluída!\n");
+    gpio_put(LED_PLAY, 0);
+}
+
+void gpio_callback(uint gpio, uint32_t events)
+{
+    static uint32_t last_time_record = 0;
+    static uint32_t last_time_play = 0;
+    uint32_t now = to_ms_since_boot(get_absolute_time());
+
+    // Debounce simples
+    if (gpio == BTN_RECORD && (now - last_time_record > 200))
+    {
+        recording = true;
+        last_time_record = now;
+        printf("Botao RECORD pressionado\n");
+    }
+    else if (gpio == BTN_PLAY && (now - last_time_play > 200))
+    {
+        playing = true;
+        last_time_play = now;
+        printf("Botao PLAY pressionado\n");
+    }
 }

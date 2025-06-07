@@ -59,6 +59,7 @@ target_include_directories(synth_dma_pwm PRIVATE
 # Add any user requested libraries
 target_link_libraries(synth_dma_pwm
         hardware_dma
+        hardware_pwm
         hardware_timer
         hardware_adc
         hardware_pio
