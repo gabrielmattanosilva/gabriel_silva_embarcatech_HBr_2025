@@ -37,6 +37,9 @@ pico_sdk_init()
 
 add_executable(synth_dma_pwm
   ./src/main.c
+  ./include/buttons_led.c
+  ./include/buzzer.c
+  ./include/microphone.c
 )
 
 pico_set_program_name(synth_dma_pwm "synth_dma_pwm")
