@@ -40,6 +40,8 @@ add_executable(synth_dma_pwm
   ./include/buttons_led.c
   ./include/buzzer.c
   ./include/microphone.c
+  ./include/display.c
+  ./include/ssd1306_i2c.c
 )
 
 pico_set_program_name(synth_dma_pwm "synth_dma_pwm")
@@ -66,7 +68,8 @@ target_link_libraries(synth_dma_pwm
         hardware_timer
         hardware_adc
         hardware_pio
-        hardware_clocks)
+        hardware_clocks
+        hardware_i2c)
 
 pico_add_extra_outputs(synth_dma_pwm)
 
