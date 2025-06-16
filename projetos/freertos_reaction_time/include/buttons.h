@@ -12,7 +12,7 @@
 #define BUTTON_A_PIN 5
 #define BUTTON_B_PIN 6
 
-#define DEBOUNCE_TIME_MS 200
+#define DEBOUNCE_TIME_MS 100
 
 typedef void (*button_callback_t)(void);
 

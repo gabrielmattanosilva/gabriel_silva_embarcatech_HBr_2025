@@ -8,8 +8,7 @@
 #ifndef RGB_LED_H
 #define RGB_LED_H
 
-#include "FreeRTOS.h"
-#include "task.h"
+#include <stdbool.h>
 
 #define LED_R_PIN 13
 #define LED_G_PIN 11
@@ -18,4 +17,4 @@
 void rgb_led_init(void);
 void set_led_color(bool red, bool green, bool blue);
 
-#endif // RGB_LED_
+#endif // RGB_LED_H

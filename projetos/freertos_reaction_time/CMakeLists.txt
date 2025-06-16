@@ -42,6 +42,7 @@ add_executable(${ProjectName}
     ./src/main.c
     ./include/buttons.c
     ./include/rgb_led.c
+    ./include/reaction_time.c
 )
 
 target_include_directories(${ProjectName} PRIVATE
