@@ -17,7 +17,7 @@ set(PICO_BOARD pico CACHE STRING "Board type")
 cmake_minimum_required(VERSION 3.12)
 
 # Name project
-SET(ProjectName freertos_reaction_time)
+SET(ProjectName f1_start_timer)
 
 # Set any variables required for importing libraries
 if (DEFINED ENV{FREERTOS_PATH})
