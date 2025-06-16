@@ -41,9 +41,13 @@ pico_sdk_init()
 add_executable(${ProjectName}
     ./src/main.c
     ./include/buttons.c
+    ./include/neopixel_pio.c
     ./include/rgb_led.c
     ./include/reaction_time.c
 )
+
+# Generate PIO header
+pico_generate_pio_header(${ProjectName} ${CMAKE_CURRENT_LIST_DIR}/include/ws2818b.pio)
 
 target_include_directories(${ProjectName} PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}
@@ -55,6 +59,8 @@ target_link_libraries(${ProjectName}
     FreeRTOS-Kernel-Heap4
     hardware_gpio
     pico_stdio_usb
+    hardware_pio
+    hardware_clocks
     )
 
 pico_add_extra_outputs(${ProjectName})
