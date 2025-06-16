@@ -2,8 +2,7 @@
  * @file rgb_led.h
  * @brief Definições para o controle do LED RGB.
  *
- * Este arquivo contém as definições para inicialização e controle do LED RGB,
- * incluindo suspensão e retomada da tarefa do LED.
+ * Este arquivo contém as definições para inicialização e controle do LED RGB.
  */
 
 #ifndef RGB_LED_H
@@ -16,10 +15,7 @@
 #define LED_G_PIN 11
 #define LED_B_PIN 12
 
-extern TaskHandle_t rgb_task_handle;
+void rgb_led_init(void);
+void set_led_color(bool red, bool green, bool blue);
 
-void rgb_led_task(void *pvParameters);
-void suspend_led_task(void);
-void resume_led_task(void);
-
-#endif // RGB_LED_H
+#endif // RGB_LED_

@@ -1,18 +1,21 @@
 # Projetos de Sistemas Embarcados - EmbarcaTech 2025
 
-Autor: **Gabriel Mattano da Silva**
+Autor: Gabriel Mattano da Silva
 
 Curso: Residência Tecnológica em Sistemas Embarcados
 
 Instituição: EmbarcaTech - HBr
 
-Campinas, 9 de Maio de 2025
+Campinas, Junho de 2025
 
 ---
 
-Template para projetos usando o Raspberry Pi Pico W.
+Sintetizador de Audio Digital utilizando a BitDogLab.
+
+- Para gravar aperte o botão A, o led RGB deverá mostrar a cor vermelha.
+- Para reproduzir aperte o botão B, o led RGB deverá mostrar a cor verde.
 
 ---
 
 ## 📜 Licença
-MIT License - MIT GPL-3.0.
+GNU GPL-3.0.

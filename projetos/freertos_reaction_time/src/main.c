@@ -1,69 +1,113 @@
 /**
  * @file main.c
- * @brief Arquivo principal do projeto.
+ * @brief Arquivo principal do projeto de teste de tempo de reação.
  *
- * Este arquivo contém a função principal, que inicializa o hardware, configura as tarefas
- * do FreeRTOS e trata os callbacks dos botões para controlar o LED RGB e o buzzer.
+ * Este arquivo implementa um teste de tempo de reação onde:
+ * 1. O sistema começa em estado idle
+ * 2. Ao pressionar o botão A, inicia um contador aleatório de 2-5 segundos
+ * 3. Após o tempo aleatório, acende o LED vermelho
+ * 4. O usuário deve pressionar o botão B o mais rápido possível
+ * 5. O sistema mede e exibe o tempo de reação
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include "pico/stdlib.h"
 #include "pico/stdio_usb.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "buttons.h"
 #include "rgb_led.h"
-#include "buzzer.h"
 
-/* Handles das tarefas */
-TaskHandle_t rgb_task_handle = NULL;
-TaskHandle_t buzzer_task_handle = NULL;
+/* Estados do sistema */
+typedef enum
+{
+  STATE_IDLE,
+  STATE_WAITING,
+  STATE_LED_ON,
+  STATE_DONE
+} system_state_t;
 
-/* Variáveis de estado */
-static bool led_suspended = false;
-static bool buzzer_suspended = false;
+static system_state_t current_state = STATE_IDLE;
+static uint32_t led_on_time = 0;
+static uint32_t reaction_time = 0;
 
 /**
- * @brief Callback para o botão A (controle do LED RGB).
+ * @brief Tarefa principal do teste de reação.
  *
+ * @param pvParameters Parâmetros da tarefa (não utilizado).
  */
-static void button_a_handler(void)
+void reaction_test_task(void *pvParameters)
 {
-  if (led_suspended)
+  rgb_led_init();
+
+  while (true)
   {
-    resume_led_task();
-    printf("LED Task resumed\n");
+    switch (current_state)
+    {
+    case STATE_IDLE:
+      // Nada a fazer, esperando botão A
+      vTaskDelay(pdMS_TO_TICKS(100));
+      break;
+
+    case STATE_WAITING:
+    {
+      // Gera um tempo aleatório entre 2000 e 5000 ms
+      uint32_t random_delay = (rand() % 3000) + 2000;
+      vTaskDelay(pdMS_TO_TICKS(random_delay));
+
+      // Acende o LED vermelho e registra o tempo
+      set_led_color(true, false, false);
+      led_on_time = to_ms_since_boot(get_absolute_time());
+      current_state = STATE_LED_ON;
+      printf("LED ON! Press button B as fast as you can!\n");
+      break;
+    }
+
+    case STATE_LED_ON:
+      // Esperando o usuário pressionar o botão B
+      vTaskDelay(pdMS_TO_TICKS(10));
+      break;
+
+    case STATE_DONE:
+      // Mostra o resultado e volta para idle
+      printf("Reaction time: %d ms\n", reaction_time);
+      set_led_color(false, false, false);
+      vTaskDelay(pdMS_TO_TICKS(1000));
+      current_state = STATE_IDLE;
+      printf("System ready. Press button A to start.\n");
+      break;
+    }
   }
-  else
-  {
-    suspend_led_task();
-    printf("LED Task suspended\n");
-  }
-  led_suspended = !led_suspended;
 }
 
 /**
- * @brief Callback para o botão B (controle do buzzer).
- *
+ * @brief Callback para o botão A (inicia o teste).
+ */
+static void button_a_handler(void)
+{
+  if (current_state == STATE_IDLE)
+  {
+    current_state = STATE_WAITING;
+    printf("Test started. Waiting for random delay...\n");
+  }
+}
+
+/**
+ * @brief Callback para o botão B (registra tempo de reação).
  */
 static void button_b_handler(void)
 {
-  if (buzzer_suspended)
+  if (current_state == STATE_LED_ON)
   {
-    resume_buzzer_task();
-    printf("Buzzer Task resumed\n");
+    reaction_time = to_ms_since_boot(get_absolute_time()) - led_on_time;
+    set_led_color(false, false, false);
+    current_state = STATE_DONE;
   }
-  else
-  {
-    suspend_buzzer_task();
-    printf("Buzzer Task suspended\n");
-  }
-  buzzer_suspended = !buzzer_suspended;
 }
 
 /**
  * @brief Função principal.
- *
  */
 int main(void)
 {
@@ -74,25 +118,23 @@ int main(void)
   buttons_init();
   register_button_a_callback(button_a_handler);
   register_button_b_callback(button_b_handler);
-  printf("Buttons initialized!\n");
 
-  /* Criação das tarefas */
-  xTaskCreate(rgb_led_task,
-              "RGB Task",
+  /* Inicializa o gerador de números aleatórios */
+  srand(to_ms_since_boot(get_absolute_time()));
+
+  /* Criação da tarefa */
+  xTaskCreate(reaction_test_task,
+              "Reaction Test Task",
               256,
               NULL,
               1,
-              &rgb_task_handle);
+              NULL);
 
-  xTaskCreate(buzzer_task,
-              "Buzzer Task",
-              256,
-              NULL,
-              1,
-              &buzzer_task_handle);
+  /* Mensagem inicial */
+  printf("Reaction Time Test\n");
+  printf("Press button A to start the test\n");
 
   /* Inicia o escalonador */
-  printf("Starting scheduler...\n");
   vTaskStartScheduler();
 
   /* Nunca deverá chegar aqui */

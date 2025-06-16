@@ -15,8 +15,6 @@ static button_callback_t button_a_callback = NULL;
 static button_callback_t button_b_callback = NULL;
 static volatile uint32_t last_button_a_time = 0;
 static volatile uint32_t last_button_b_time = 0;
-static volatile bool button_a_pressed = false;
-static volatile bool button_b_pressed = false;
 
 /**
  * @brief Função de interrupção para os botões.
@@ -34,7 +32,6 @@ static void button_isr(uint gpio, uint32_t events)
         if ((current_time - last_button_a_time) > DEBOUNCE_TIME_MS)
         {
             last_button_a_time = current_time;
-            button_a_pressed = true;
             if (button_a_callback)
             {
                 button_a_callback();
@@ -46,7 +43,6 @@ static void button_isr(uint gpio, uint32_t events)
         if ((current_time - last_button_b_time) > DEBOUNCE_TIME_MS)
         {
             last_button_b_time = current_time;
-            button_b_pressed = true;
             if (button_b_callback)
             {
                 button_b_callback();
