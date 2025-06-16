@@ -14,7 +14,6 @@
 #include "task.h"
 #include "buttons.h"
 #include "reaction_time.h"
-#include "rgb_led.h"
 
 int main(void)
 {

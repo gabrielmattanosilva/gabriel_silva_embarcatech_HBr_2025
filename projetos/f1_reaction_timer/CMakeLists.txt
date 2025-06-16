@@ -42,7 +42,6 @@ add_executable(${ProjectName}
     ./src/main.c
     ./include/buttons.c
     ./include/neopixel_pio.c
-    ./include/rgb_led.c
     ./include/reaction_time.c
 )
 

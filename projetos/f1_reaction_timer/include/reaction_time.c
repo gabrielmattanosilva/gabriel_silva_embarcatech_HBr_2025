@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "pico/stdlib.h"
-#include "rgb_led.h"
+#include "neopixel_pio.h"
 
 static volatile system_state_t current_state = STATE_IDLE;
 static uint32_t led_on_time = 0;
@@ -24,7 +24,7 @@ static QueueHandle_t button_queue = NULL;
 void reaction_time_init(void)
 {
     button_queue = xQueueCreate(10, sizeof(button_event_t));
-    rgb_led_init();
+    npInit();
     printf("Aperte o botao A para iniciar.\n");
 }
 
@@ -66,17 +66,18 @@ void reaction_time_task(void *pvParameters)
         switch (current_state)
         {
         case STATE_IDLE:
-            set_led_color(false, false, false);
             vTaskDelay(pdMS_TO_TICKS(100));
             break;
 
         case STATE_WAITING:
         {
-            printf("Espere pelo LED vermelho e aperte o botão B.\n");
-            /* Gera um delay aleatório de 2 a 5 segundos */
-            uint32_t random_delay = (rand() % 3000) + 2000;
+            printf("Espere as luzes se apagarem e aperte o botão B.\n");
+            npSetF1Lights(true);
+            /* Gera um delay aleatório de 0.2 a 3 segundos, fonte:
+            https://www.grandprix.com.au/fan-zone/f1-explained/trackside-flags-and-lights */
+            uint32_t random_delay = (rand() % 2800) + 200;
             vTaskDelay(pdMS_TO_TICKS(random_delay));
-            set_led_color(true, false, false);
+            npSetF1Lights(false);
             led_on_time = to_ms_since_boot(get_absolute_time());
             current_state = STATE_LED_ON;
             break;
@@ -88,7 +89,6 @@ void reaction_time_task(void *pvParameters)
 
         case STATE_DONE:
             printf("Tempo de reacao: %d ms\n", reaction_time);
-            set_led_color(false, false, false);
             vTaskDelay(pdMS_TO_TICKS(1000));
             current_state = STATE_IDLE;
             printf("Aperte o botao A para reiniciar.\n");
