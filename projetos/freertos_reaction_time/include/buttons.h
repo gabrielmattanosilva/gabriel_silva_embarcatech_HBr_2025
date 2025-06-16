@@ -1,3 +1,11 @@
+/**
+ * @file buttons.h
+ * @brief Definições para o controle dos botões
+ *
+ * Contém as definições de pinos, constantes e protótipos de funções
+ * para o controle dos botões.
+ */
+
 #ifndef BUTTONS_H
 #define BUTTONS_H
 

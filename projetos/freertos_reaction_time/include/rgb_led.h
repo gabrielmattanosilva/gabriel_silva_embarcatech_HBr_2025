@@ -1,6 +1,6 @@
 /**
  * @file rgb_led.h
- * @brief Definições para o controle do LED RGB.
+ * @brief Definições para o controle do LED RGB
  *
  * Este arquivo contém as definições para inicialização e controle do LED RGB.
  */

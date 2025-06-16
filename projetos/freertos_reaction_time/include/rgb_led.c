@@ -1,6 +1,6 @@
 /**
  * @file rgb_led.c
- * @brief Implementação do controle do LED RGB.
+ * @brief Implementação do controle do LED RGB
  *
  * Este arquivo contém a implementação das funções para inicialização e controle
  * do LED RGB.
@@ -31,9 +31,9 @@ void rgb_led_init(void)
 /**
  * @brief Define a cor do LED RGB.
  *
- * @param red Estado do LED vermelho (true = ligado, false = desligado).
- * @param green Estado do LED verde (true = ligado, false = desligado).
- * @param blue Estado do LED azul (true = ligado, false = desligado).
+ * @param red Estado do LED vermelho (true = ligado, false = desligado)
+ * @param green Estado do LED verde (true = ligado, false = desligado)
+ * @param blue Estado do LED azul (true = ligado, false = desligado)
  */
 void set_led_color(bool red, bool green, bool blue)
 {

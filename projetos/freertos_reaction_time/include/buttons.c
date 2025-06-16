@@ -1,3 +1,11 @@
+/**
+ * @file buttons.c
+ * @brief Implementação do controle dos botões
+ *
+ * Contém a implementação das funções para inicialização e tratamento
+ * de interrupções dos botões, incluindo debounce.
+ */
+
 #include "buttons.h"
 #include "hardware/gpio.h"
 #include "pico/time.h"
@@ -5,6 +13,11 @@
 
 static QueueHandle_t button_queue = NULL;
 
+/**
+ * @brief ISR para tratamento de pressionamento de botões
+ * @param gpio Número do pino GPIO que gerou a interrupção
+ * @param events Tipo de evento que acionou a interrupção
+ */
 static void button_isr(uint gpio, uint32_t events)
 {
     uint32_t current_time = to_ms_since_boot(get_absolute_time());
@@ -25,6 +38,10 @@ static void button_isr(uint gpio, uint32_t events)
     }
 }
 
+/**
+ * @brief Inicializa os botões e configura interrupções
+ * @param queue Fila para envio de eventos de botão
+ */
 void buttons_init(QueueHandle_t queue)
 {
     button_queue = queue;
@@ -41,6 +58,10 @@ void buttons_init(QueueHandle_t queue)
     gpio_set_irq_enabled(BUTTON_B_PIN, GPIO_IRQ_EDGE_FALL, true);
 }
 
+/**
+ * @brief Tarefa para processamento de eventos de botão
+ * @param pvParameters Parâmetros da tarefa (não utilizado)
+ */
 void buttons_task(void *pvParameters)
 {
     button_event_t event;

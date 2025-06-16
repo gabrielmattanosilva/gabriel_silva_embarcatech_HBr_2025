@@ -1,3 +1,11 @@
+/**
+ * @file reaction_time.h
+ * @brief Definições para o teste de tempo de reação
+ *
+ * Contém as definições de estados, eventos e protótipos de funções
+ * para o teste de tempo de reação.
+ */
+
 #ifndef REACTION_TIME_H
 #define REACTION_TIME_H
 
@@ -5,14 +13,22 @@
 #include "FreeRTOS.h"
 #include "queue.h"
 
-typedef enum {
+/**
+ * @brief Estados possíveis do sistema
+ */
+typedef enum
+{
     STATE_IDLE,
     STATE_WAITING,
     STATE_LED_ON,
     STATE_DONE
 } system_state_t;
 
-typedef enum {
+/**
+ * @brief Tipos de eventos de botão
+ */
+typedef enum
+{
     EVENT_NONE,
     EVENT_BUTTON_A_PRESSED,
     EVENT_BUTTON_B_PRESSED
