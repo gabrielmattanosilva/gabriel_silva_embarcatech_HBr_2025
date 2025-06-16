@@ -1,62 +1,34 @@
-/**
- * @file buttons.c
- * @brief Implementação do controle dos botões.
- *
- * Este arquivo contém a implementação das funções para inicialização e tratamento
- * de interrupções dos botões A e B, incluindo debounce e chamadas de callback.
- */
-
 #include "buttons.h"
 #include "hardware/gpio.h"
-#include "hardware/timer.h"
-#include "pico/stdlib.h"
+#include "pico/time.h"
+#include "reaction_time.h"
 
-static button_callback_t button_a_callback = NULL;
-static button_callback_t button_b_callback = NULL;
-static volatile uint32_t last_button_a_time = 0;
-static volatile uint32_t last_button_b_time = 0;
+static QueueHandle_t button_queue = NULL;
 
-/**
- * @brief Função de interrupção para os botões.
- *
- * @param gpio Pino GPIO que gerou a interrupção.
- * @param events Eventos que triggaram a interrupção.
- *
- */
 static void button_isr(uint gpio, uint32_t events)
 {
     uint32_t current_time = to_ms_since_boot(get_absolute_time());
+    static uint32_t last_button_a_time = 0;
+    static uint32_t last_button_b_time = 0;
 
-    if (gpio == BUTTON_A_PIN)
+    if (gpio == BUTTON_A_PIN && (current_time - last_button_a_time) > DEBOUNCE_TIME_MS)
     {
-        if ((current_time - last_button_a_time) > DEBOUNCE_TIME_MS)
-        {
-            last_button_a_time = current_time;
-            if (button_a_callback)
-            {
-                button_a_callback();
-            }
-        }
+        last_button_a_time = current_time;
+        button_event_t event = EVENT_BUTTON_A_PRESSED;
+        xQueueSendFromISR(button_queue, &event, NULL);
     }
-    else if (gpio == BUTTON_B_PIN)
+    else if (gpio == BUTTON_B_PIN && (current_time - last_button_b_time) > DEBOUNCE_TIME_MS)
     {
-        if ((current_time - last_button_b_time) > DEBOUNCE_TIME_MS)
-        {
-            last_button_b_time = current_time;
-            if (button_b_callback)
-            {
-                button_b_callback();
-            }
-        }
+        last_button_b_time = current_time;
+        button_event_t event = EVENT_BUTTON_B_PRESSED;
+        xQueueSendFromISR(button_queue, &event, NULL);
     }
 }
 
-/**
- * @brief Inicializa os botões.
- *
- */
-void buttons_init(void)
+void buttons_init(QueueHandle_t queue)
 {
+    button_queue = queue;
+
     gpio_init(BUTTON_A_PIN);
     gpio_set_dir(BUTTON_A_PIN, GPIO_IN);
     gpio_pull_up(BUTTON_A_PIN);
@@ -69,24 +41,14 @@ void buttons_init(void)
     gpio_set_irq_enabled(BUTTON_B_PIN, GPIO_IRQ_EDGE_FALL, true);
 }
 
-/**
- * @brief Registra um callback para o botão A.
- *
- * @param callback Função a ser chamada quando o botão A for pressionado.
- *
- */
-void register_button_a_callback(button_callback_t callback)
+void buttons_task(void *pvParameters)
 {
-    button_a_callback = callback;
-}
-
-/**
- * @brief Registra um callback para o botão B.
- *
- * @param callback Função a ser chamada quando o botão B for pressionado.
- *
- */
-void register_button_b_callback(button_callback_t callback)
-{
-    button_b_callback = callback;
+    button_event_t event;
+    while (true)
+    {
+        if (xQueueReceive(button_queue, &event, portMAX_DELAY))
+        {
+            process_button_event(event);
+        }
+    }
 }
