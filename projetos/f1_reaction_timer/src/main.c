@@ -8,11 +8,13 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include "pico/stdlib.h"
 #include "pico/stdio_usb.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "buttons.h"
+#include "display_oled.h"
 #include "reaction_time.h"
 
 int main(void)
@@ -20,6 +22,9 @@ int main(void)
     /* Inicializações básicas */
     stdio_init_all();
     sleep_ms(1000);
+
+    /* Inicializa o display OLED */
+    display_init();
 
     /* Inicializa o módulo de reaction_time (cria a fila) */
     reaction_time_init();

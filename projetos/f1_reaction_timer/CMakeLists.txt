@@ -41,8 +41,10 @@ pico_sdk_init()
 add_executable(${ProjectName}
     ./src/main.c
     ./include/buttons.c
+    ./include/display_oled.c
     ./include/neopixel_pio.c
     ./include/reaction_time.c
+    ./include/ssd1306_i2c.c
 )
 
 # Generate PIO header
@@ -56,10 +58,11 @@ target_include_directories(${ProjectName} PRIVATE
 target_link_libraries(${ProjectName}
     pico_stdlib
     FreeRTOS-Kernel-Heap4
-    hardware_gpio
-    pico_stdio_usb
-    hardware_pio
     hardware_clocks
+    hardware_gpio
+    hardware_i2c
+    hardware_pio
+    pico_stdio_usb
     )
 
 pico_add_extra_outputs(${ProjectName})

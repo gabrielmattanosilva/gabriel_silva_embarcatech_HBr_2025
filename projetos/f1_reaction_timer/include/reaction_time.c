@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "pico/stdlib.h"
+#include "display_oled.h"
 #include "neopixel_pio.h"
 
 static volatile system_state_t current_state = STATE_IDLE;
@@ -66,11 +67,13 @@ void reaction_time_task(void *pvParameters)
         switch (current_state)
         {
         case STATE_IDLE:
+            display_show_idle_message();
             vTaskDelay(pdMS_TO_TICKS(100));
             break;
 
         case STATE_WAITING:
         {
+            display_show_waiting_message();
             printf("Espere as luzes se apagarem e aperte o botão B.\n");
             npSetF1Lights(true);
             /* Gera um delay aleatório de 0.2 a 3 segundos, fonte:
@@ -88,9 +91,9 @@ void reaction_time_task(void *pvParameters)
             break;
 
         case STATE_DONE:
+            display_show_reaction_time(reaction_time);
             printf("Tempo de reacao: %d ms\n", reaction_time);
             vTaskDelay(pdMS_TO_TICKS(1000));
-            current_state = STATE_IDLE;
             printf("Aperte o botao A para reiniciar.\n");
             break;
         }
@@ -106,7 +109,7 @@ void process_button_event(button_event_t event)
     switch (event)
     {
     case EVENT_BUTTON_A_PRESSED:
-        if (current_state == STATE_IDLE)
+        if (current_state == STATE_IDLE || current_state == STATE_DONE)
         {
             current_state = STATE_WAITING;
         }
