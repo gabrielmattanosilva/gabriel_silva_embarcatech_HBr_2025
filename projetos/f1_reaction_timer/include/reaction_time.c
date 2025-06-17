@@ -5,6 +5,9 @@
  * Contém a implementação da máquina de estados que controla o teste
  * de tempo de reação, incluindo geração de atrasos aleatórios e
  * cálculo do tempo de resposta.
+ *
+ * @note Delay aleatório de 0.2 a 3 segundos baseado em:
+ *       https://www.grandprix.com.au/fan-zone/f1-explained/trackside-flags-and-lights
  */
 
 #include "reaction_time.h"
@@ -76,8 +79,7 @@ void reaction_time_task(void *pvParameters)
             display_show_waiting_message();
             printf("Espere as luzes se apagarem e aperte o botão B.\n");
             npSetF1Lights(true);
-            /* Gera um delay aleatório de 0.2 a 3 segundos, fonte:
-            https://www.grandprix.com.au/fan-zone/f1-explained/trackside-flags-and-lights */
+            /* Gera um delay aleatório de 0.2 a 3 segundos */
             uint32_t random_delay = (rand() % 2800) + 200;
             vTaskDelay(pdMS_TO_TICKS(random_delay));
             npSetF1Lights(false);
