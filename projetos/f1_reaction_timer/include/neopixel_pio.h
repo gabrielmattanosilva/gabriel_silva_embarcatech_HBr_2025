@@ -15,7 +15,7 @@
 #define LED_PIN 7
 #define LED_COUNT 25
 
-void npInit();
+void npInit(void);
 void npSetF1Lights(bool state);
 
 #endif // NEOPIXEL_PIO_H

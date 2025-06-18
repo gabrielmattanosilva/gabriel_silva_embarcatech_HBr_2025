@@ -36,7 +36,7 @@ uint sm;
 /**
  * @brief Inicializa a máquina PIO para controle da matriz de LEDs
  */
-void npInit()
+void npInit(void)
 {
     /* Cria programa PIO */
     uint offset = pio_add_program(pio0, &ws2818b_program);
@@ -60,6 +60,8 @@ void npInit()
         leds[i].G = 0;
         leds[i].B = 0;
     }
+
+    npSetF1Lights(false);
 }
 
 /**
