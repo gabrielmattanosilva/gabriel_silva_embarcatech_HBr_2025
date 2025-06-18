@@ -22,6 +22,9 @@ static uint8_t back_buffer[ssd1306_buffer_length];
 static bool buffer_changed = false;
 static bool display_initialized = false;
 
+/**
+ * @brief Área de renderização para o quadro completo do display
+ */
 static struct render_area full_frame = {
     .start_column = 0,
     .end_column = ssd1306_width - 1,
@@ -29,6 +32,9 @@ static struct render_area full_frame = {
     .end_page = ssd1306_n_pages - 1,
     .buffer_length = ssd1306_buffer_length};
 
+/**
+ * @brief Inicializa o display OLED e a interface I2C
+ */
 void display_init(void)
 {
     if (display_initialized)
@@ -46,18 +52,31 @@ void display_init(void)
     display_initialized = true;
 }
 
+/**
+ * @brief Limpa o buffer traseiro do display
+ */
 void display_clear(void)
 {
     memset(back_buffer, 0, ssd1306_buffer_length);
     buffer_changed = true;
 }
 
+/**
+ * @brief Desenha texto no buffer traseiro do display
+ * @param x Posição horizontal inicial do texto
+ * @param y Posição vertical inicial do texto (em páginas de 8 pixels)
+ * @param text Texto a ser desenhado
+ */
 void display_draw_text(int x, int y, const char *text)
 {
     ssd1306_draw_string(back_buffer, x, y, text);
     buffer_changed = true;
 }
 
+/**
+ * @brief Atualiza o display com o conteúdo do buffer traseiro
+ * @param force_full Força atualização completa mesmo sem alterações
+ */
 void display_update(bool force_full)
 {
     if (!buffer_changed && !force_full)
@@ -72,6 +91,9 @@ void display_update(bool force_full)
     buffer_changed = false;
 }
 
+/**
+ * @brief Exibe mensagem de estado ocioso no display
+ */
 void display_show_idle_message(void)
 {
     display_clear();
@@ -82,6 +104,9 @@ void display_show_idle_message(void)
     display_update(true);
 }
 
+/**
+ * @brief Exibe mensagem de espera no display
+ */
 void display_show_waiting_message(void)
 {
     display_clear();
@@ -89,6 +114,10 @@ void display_show_waiting_message(void)
     display_update(true);
 }
 
+/**
+ * @brief Exibe o tempo de reação medido no display
+ * @param reaction_time Tempo de reação em milissegundos
+ */
 void display_show_reaction_time(uint32_t reaction_time)
 {
     char time_text[20];
