@@ -1,104 +1,131 @@
-/**
- * @file main.c
- * @brief Arquivo principal do projeto.
- *
- * Este arquivo contém a função principal, que inicializa o hardware, configura as tarefas
- * do FreeRTOS e trata os callbacks dos botões para controlar o LED RGB e o buzzer.
- */
-
 #include <stdio.h>
 #include "pico/stdlib.h"
-#include "pico/stdio_usb.h"
+#include "hardware/adc.h"
+#include "hardware/dma.h"
+#include "hardware/irq.h"
+#include "hardware/timer.h"
+#include "pico/time.h"
 #include "FreeRTOS.h"
 #include "task.h"
-#include "buttons.h"
-#include "rgb_led.h"
-#include "buzzer.h"
 
-/* Handles das tarefas */
-TaskHandle_t rgb_task_handle = NULL;
-TaskHandle_t buzzer_task_handle = NULL;
+#define ADC_PIN 8
+#define ADC_INPUT 0
+#define SAMPLE_RATE_HZ 1000
+#define BUFFER_SIZE 256
 
-/* Variáveis de estado */
-static bool led_suspended = false;
-static bool buzzer_suspended = false;
+uint16_t adc_buffer[BUFFER_SIZE];
 
-/**
- * @brief Callback para o botão A (controle do LED RGB).
- *
- */
-static void button_a_handler(void)
+volatile bool buffer_ready = false;
+int dma_chan;
+
+void dma_handler()
 {
-  if (led_suspended)
-  {
-    resume_led_task();
-    printf("LED Task resumed\n");
-  }
-  else
-  {
-    suspend_led_task();
-    printf("LED Task suspended\n");
-  }
-  led_suspended = !led_suspended;
+    dma_hw->ints0 = 1u << dma_chan; // Clear interrupt
+    buffer_ready = true;
 }
 
-/**
- * @brief Callback para o botão B (controle do buzzer).
- *
- */
-static void button_b_handler(void)
+bool repeating_timer_callback(struct repeating_timer *t)
 {
-  if (buzzer_suspended)
-  {
-    resume_buzzer_task();
-    printf("Buzzer Task resumed\n");
-  }
-  else
-  {
-    suspend_buzzer_task();
-    printf("Buzzer Task suspended\n");
-  }
-  buzzer_suspended = !buzzer_suspended;
+    static uint32_t index = 0;
+
+    if (index < BUFFER_SIZE)
+    {
+        adc_run(true);
+        adc_hw->cs |= ADC_CS_START_ONCE_BITS; // Start single conversion
+        index++;
+    }
+    else
+    {
+        index = 0; // Reset index for next block
+    }
+
+    return true; // Keep repeating
 }
 
-/**
- * @brief Função principal.
- *
- */
-int main(void)
+void setup_timer_trigger()
 {
-  /* Inicializações básicas */
-  stdio_init_all();
+    static struct repeating_timer timer;
+    add_repeating_timer_us(-1000000 / SAMPLE_RATE_HZ, repeating_timer_callback, NULL, &timer);
+}
 
-  /* Configuração dos botões */
-  buttons_init();
-  register_button_a_callback(button_a_handler);
-  register_button_b_callback(button_b_handler);
-  printf("Buttons initialized!\n");
+void setup_adc_dma()
+{
+    adc_init();
+    adc_gpio_init(ADC_PIN);
+    adc_select_input(ADC_INPUT);
+    adc_set_round_robin(1 << ADC_INPUT);
 
-  /* Criação das tarefas */
-  xTaskCreate(rgb_led_task,
-              "RGB Task",
-              256,
-              NULL,
-              1,
-              &rgb_task_handle);
+    adc_fifo_setup(true, true, 1, false, false);
+    adc_run(false);
 
-  xTaskCreate(buzzer_task,
-              "Buzzer Task",
-              256,
-              NULL,
-              1,
-              &buzzer_task_handle);
+    dma_chan = dma_claim_unused_channel(true);
+    dma_channel_config c = dma_channel_get_default_config(dma_chan);
+    channel_config_set_transfer_data_size(&c, DMA_SIZE_16);
+    channel_config_set_read_increment(&c, false);
+    channel_config_set_write_increment(&c, true);
+    channel_config_set_dreq(&c, DREQ_ADC);
 
-  /* Inicia o escalonador */
-  printf("Starting scheduler...\n");
-  vTaskStartScheduler();
+    dma_channel_configure(
+        dma_chan, &c,
+        adc_buffer,
+        &adc_hw->fifo,
+        BUFFER_SIZE,
+        false);
 
-  /* Nunca deverá chegar aqui */
-  while (true)
-  {
-    printf("ERROR: Scheduler exited!\n");
-    sleep_ms(1000);
-  }
+    dma_channel_set_irq0_enabled(dma_chan, true);
+    irq_set_exclusive_handler(DMA_IRQ_0, dma_handler);
+    irq_set_enabled(DMA_IRQ_0, true);
+
+    dma_channel_start(dma_chan);
+}
+
+void adc_print_task(void *pvParameters)
+{
+    static uint32_t sample_counter = 0;
+
+    while (true)
+    {
+        if (buffer_ready)
+        {
+            buffer_ready = false;
+
+            for (int i = 0; i < BUFFER_SIZE; i++)
+            {
+                printf("%lu, %u\n",sample_counter++, adc_buffer[i]);
+            }
+
+            dma_channel_configure(
+                dma_chan, NULL,
+                adc_buffer,
+                &adc_hw->fifo,
+                BUFFER_SIZE,
+                true // Restart DMA
+            );
+        }
+        else
+        {
+            vTaskDelay(pdMS_TO_TICKS(1));
+        }
+    }
+}
+
+int main()
+{
+    stdio_init_all();
+    while (!stdio_usb_connected())
+    {
+        sleep_ms(100);
+    }
+
+    printf("Inicializando...\n");
+    setup_timer_trigger();
+    setup_adc_dma();
+
+    xTaskCreate(adc_print_task, "ADC Print", 1024, NULL, 1, NULL);
+    vTaskStartScheduler();
+
+    while (true)
+    {
+        tight_loop_contents();
+    }
 }
