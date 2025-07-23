@@ -1,131 +1,126 @@
 #include <stdio.h>
+#include <math.h>
 #include "pico/stdlib.h"
-#include "hardware/adc.h"
-#include "hardware/dma.h"
-#include "hardware/irq.h"
-#include "hardware/timer.h"
-#include "pico/time.h"
+#include "hardware/i2c.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "semphr.h"
 
-#define ADC_PIN 8
-#define ADC_INPUT 0
-#define SAMPLE_RATE_HZ 1000
-#define BUFFER_SIZE 256
+#define I2C_PORT        i2c0
+#define SDA_PIN         0
+#define SCL_PIN         1
+#define ADS1115_ADDR    0x48
 
-uint16_t adc_buffer[BUFFER_SIZE];
+#define NUM_SAMPLES     256
+int16_t buffer_ch0[NUM_SAMPLES];
+int16_t buffer_ch1[NUM_SAMPLES];
+uint32_t timestamps_ch0[NUM_SAMPLES];
+uint32_t timestamps_ch1[NUM_SAMPLES];
 
-volatile bool buffer_ready = false;
-int dma_chan;
+#define CONFIG_OS_SINGLE     (1 << 15)
+#define CONFIG_MUX_AIN0      (0x4 << 12)
+#define CONFIG_MUX_AIN1      (0x5 << 12)
+#define CONFIG_PGA_4_096V    (0x1 << 9)
+#define CONFIG_MODE_SINGLE   (1 << 8)
+#define CONFIG_DR_860SPS     (0x7 << 5)
+#define CONFIG_DEFAULT       (CONFIG_OS_SINGLE | CONFIG_PGA_4_096V | CONFIG_MODE_SINGLE | CONFIG_DR_860SPS)
 
-void dma_handler()
-{
-    dma_hw->ints0 = 1u << dma_chan; // Clear interrupt
-    buffer_ready = true;
+#define LSB_4_096V (4.096 / 32768.0)
+#define DC_OFFSET_VOLTS 1.65
+
+void i2c_init_ads() {
+    i2c_init(I2C_PORT, 100 * 1000);
+    gpio_set_function(SDA_PIN, GPIO_FUNC_I2C);
+    gpio_set_function(SCL_PIN, GPIO_FUNC_I2C);
+    gpio_pull_up(SDA_PIN);
+    gpio_pull_up(SCL_PIN);
 }
 
-bool repeating_timer_callback(struct repeating_timer *t)
-{
-    static uint32_t index = 0;
-
-    if (index < BUFFER_SIZE)
-    {
-        adc_run(true);
-        adc_hw->cs |= ADC_CS_START_ONCE_BITS; // Start single conversion
-        index++;
-    }
-    else
-    {
-        index = 0; // Reset index for next block
-    }
-
-    return true; // Keep repeating
+void ads1115_write(uint8_t reg, uint16_t value) {
+    uint8_t data[3] = { reg, value >> 8, value & 0xFF };
+    i2c_write_blocking(I2C_PORT, ADS1115_ADDR, data, 3, false);
 }
 
-void setup_timer_trigger()
-{
-    static struct repeating_timer timer;
-    add_repeating_timer_us(-1000000 / SAMPLE_RATE_HZ, repeating_timer_callback, NULL, &timer);
+int16_t ads1115_read_conversion() {
+    uint8_t reg = 0x00;
+    uint8_t val[2];
+    i2c_write_blocking(I2C_PORT, ADS1115_ADDR, &reg, 1, true);
+    i2c_read_blocking(I2C_PORT, ADS1115_ADDR, val, 2, false);
+    return (int16_t)((val[0] << 8) | val[1]);
 }
 
-void setup_adc_dma()
-{
-    adc_init();
-    adc_gpio_init(ADC_PIN);
-    adc_select_input(ADC_INPUT);
-    adc_set_round_robin(1 << ADC_INPUT);
-
-    adc_fifo_setup(true, true, 1, false, false);
-    adc_run(false);
-
-    dma_chan = dma_claim_unused_channel(true);
-    dma_channel_config c = dma_channel_get_default_config(dma_chan);
-    channel_config_set_transfer_data_size(&c, DMA_SIZE_16);
-    channel_config_set_read_increment(&c, false);
-    channel_config_set_write_increment(&c, true);
-    channel_config_set_dreq(&c, DREQ_ADC);
-
-    dma_channel_configure(
-        dma_chan, &c,
-        adc_buffer,
-        &adc_hw->fifo,
-        BUFFER_SIZE,
-        false);
-
-    dma_channel_set_irq0_enabled(dma_chan, true);
-    irq_set_exclusive_handler(DMA_IRQ_0, dma_handler);
-    irq_set_enabled(DMA_IRQ_0, true);
-
-    dma_channel_start(dma_chan);
+bool ads1115_conversion_ready() {
+    uint8_t reg = 0x01;
+    uint8_t val[2];
+    i2c_write_blocking(I2C_PORT, ADS1115_ADDR, &reg, 1, true);
+    i2c_read_blocking(I2C_PORT, ADS1115_ADDR, val, 2, false);
+    return (val[0] & 0x80);
 }
 
-void adc_print_task(void *pvParameters)
-{
-    static uint32_t sample_counter = 0;
+void sampling_task(void *params) {
+    const TickType_t delay_between_cycles = pdMS_TO_TICKS(2000);
+    const TickType_t sampling_period = pdMS_TO_TICKS(5); // 200Hz
 
-    while (true)
-    {
-        if (buffer_ready)
-        {
-            buffer_ready = false;
+    while (1) {
+        TickType_t xLastWakeTime = xTaskGetTickCount();
 
-            for (int i = 0; i < BUFFER_SIZE; i++)
-            {
-                printf("%lu, %u\n",sample_counter++, adc_buffer[i]);
-            }
+        for (int i = 0; i < NUM_SAMPLES; i++) {
+            // CH0
+            ads1115_write(0x01, CONFIG_DEFAULT | CONFIG_MUX_AIN0);
+            while (!ads1115_conversion_ready()) vTaskDelay(pdMS_TO_TICKS(1));
+            int16_t ch0 = ads1115_read_conversion();
+            uint32_t t_ch0 = to_ms_since_boot(get_absolute_time());
 
-            dma_channel_configure(
-                dma_chan, NULL,
-                adc_buffer,
-                &adc_hw->fifo,
-                BUFFER_SIZE,
-                true // Restart DMA
-            );
+            // CH1
+            ads1115_write(0x01, CONFIG_DEFAULT | CONFIG_MUX_AIN1);
+            while (!ads1115_conversion_ready()) vTaskDelay(pdMS_TO_TICKS(1));
+            int16_t ch1 = ads1115_read_conversion();
+            uint32_t t_ch1 = to_ms_since_boot(get_absolute_time());
+
+            buffer_ch0[i] = ch0;
+            buffer_ch1[i] = ch1;
+            timestamps_ch0[i] = t_ch0;
+            timestamps_ch1[i] = t_ch1;
+
+            vTaskDelayUntil(&xLastWakeTime, sampling_period);
         }
-        else
-        {
-            vTaskDelay(pdMS_TO_TICKS(1));
+
+        // Impressão dos dados
+        for (int i = 0; i < NUM_SAMPLES; i++) {
+            printf("%d,%d,%lu,%lu\n",
+                   buffer_ch0[i],
+                   buffer_ch1[i],
+                   timestamps_ch0[i],
+                   timestamps_ch1[i]);
         }
+
+        // Cálculo RMS
+        double sum_sq_ch0 = 0;
+        double sum_sq_ch1 = 0;
+
+        for (int i = 0; i < NUM_SAMPLES; i++) {
+            double volts0 = buffer_ch0[i] * LSB_4_096V - DC_OFFSET_VOLTS;
+            double volts1 = buffer_ch1[i] * LSB_4_096V - DC_OFFSET_VOLTS;
+            sum_sq_ch0 += volts0 * volts0;
+            sum_sq_ch1 += volts1 * volts1;
+        }
+
+        double rms0 = sqrt(sum_sq_ch0 / NUM_SAMPLES);
+        double rms1 = sqrt(sum_sq_ch1 / NUM_SAMPLES);
+
+        printf("RMS_CH0: %.4f V | RMS_CH1: %.4f V\n\n", rms0, rms1);
+
+        // Espera até o próximo ciclo
+        vTaskDelay(delay_between_cycles);
     }
 }
 
-int main()
-{
+int main() {
     stdio_init_all();
-    while (!stdio_usb_connected())
-    {
-        sleep_ms(100);
-    }
+    i2c_init_ads();
 
-    printf("Inicializando...\n");
-    setup_timer_trigger();
-    setup_adc_dma();
+    xTaskCreate(sampling_task, "SAMPLER", 2048, NULL, 1, NULL);
 
-    xTaskCreate(adc_print_task, "ADC Print", 1024, NULL, 1, NULL);
     vTaskStartScheduler();
-
-    while (true)
-    {
-        tight_loop_contents();
-    }
+    while (1);
 }

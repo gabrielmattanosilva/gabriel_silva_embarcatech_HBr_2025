@@ -53,6 +53,7 @@ target_link_libraries(${ProjectName}
     hardware_adc
     hardware_dma
     hardware_irq
+    hardware_i2c
     pico_stdio_usb
     )
 
