@@ -26,7 +26,12 @@ uint32_t timestamps_ch1[NUM_SAMPLES];
 #define CONFIG_DEFAULT       (CONFIG_OS_SINGLE | CONFIG_PGA_4_096V | CONFIG_MODE_SINGLE | CONFIG_DR_860SPS)
 
 #define LSB_4_096V (4.096 / 32768.0)
-#define DC_OFFSET_VOLTS 1.65
+
+#define VOLT_DC_OFFSET 1.50
+#define CURR_DC_OFFSET 1.65
+
+#define VOLT_CONV_FACTOR 301.15
+#define CURR_CONV_FACTOR 54.87
 
 void i2c_init_ads() {
     i2c_init(I2C_PORT, 100 * 1000);
@@ -99,8 +104,8 @@ void sampling_task(void *params) {
         double sum_sq_ch1 = 0;
 
         for (int i = 0; i < NUM_SAMPLES; i++) {
-            double volts0 = buffer_ch0[i] * LSB_4_096V - DC_OFFSET_VOLTS;
-            double volts1 = buffer_ch1[i] * LSB_4_096V - DC_OFFSET_VOLTS;
+            double volts0 = buffer_ch0[i] * LSB_4_096V - VOLT_DC_OFFSET;
+            double volts1 = buffer_ch1[i] * LSB_4_096V - CURR_DC_OFFSET;
             sum_sq_ch0 += volts0 * volts0;
             sum_sq_ch1 += volts1 * volts1;
         }
@@ -108,7 +113,11 @@ void sampling_task(void *params) {
         double rms0 = sqrt(sum_sq_ch0 / NUM_SAMPLES);
         double rms1 = sqrt(sum_sq_ch1 / NUM_SAMPLES);
 
+        double rms0_real = rms0 * VOLT_CONV_FACTOR;
+        double rms1_real = rms1 * CURR_CONV_FACTOR;
+
         printf("RMS_CH0: %.4f V | RMS_CH1: %.4f V\n\n", rms0, rms1);
+        printf("RMS_CH0_REAL: %.2f V | RMS_CH1_REAL: %.2f A", rms0_real, rms1_real);
 
         // Espera até o próximo ciclo
         vTaskDelay(delay_between_cycles);
