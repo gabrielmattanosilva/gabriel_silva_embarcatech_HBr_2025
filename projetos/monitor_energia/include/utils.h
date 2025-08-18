@@ -1,3 +1,8 @@
+/**
+ * @file utils.h
+ * @brief Declarações de utilitários de rede.
+ */
+
 #ifndef UTILS_H
 #define UTILS_H
 

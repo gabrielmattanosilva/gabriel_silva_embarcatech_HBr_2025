@@ -1,3 +1,11 @@
+/**
+ * @file wifi_manager.c
+ * @brief Gerenciador de conexão Wi‑Fi usando cyw43 (threadsafe background).
+ * @details
+ *  Mantém tentativa de conexão com backoff exponencial, publica estado e,
+ *  quando a conexão sobe, sincroniza o RTC via NTP uma vez.
+ */
+
 #include "wifi_manager.h"
 #include <string.h>
 #include "pico/cyw43_arch.h"
@@ -8,13 +16,13 @@
 
 #define TAG "wifi_manager"
 
-#define WIFI_NTP_HOST           "pool.ntp.org"
-#define WIFI_NTP_TIMEOUT_MS     5000U
-#define WIFI_BACKOFF_MIN_MS     3000U
-#define WIFI_BACKOFF_MAX_MS     300000U
-#define WIFI_CONNECT_GUARD_MS   12000U
-#define WIFI_CONNECT_TIMEOUT_MS 20000U
-#define WIFI_TICK_PERIOD_MS     100U
+#define WIFI_NTP_HOST           "pool.ntp.org"  /**< Host NTP para sincronizar RTC. */
+#define WIFI_NTP_TIMEOUT_MS     5000U           /**< Timeout da sincronização NTP. */
+#define WIFI_BACKOFF_MIN_MS     3000U           /**< Backoff mínimo entre tentativas. */
+#define WIFI_BACKOFF_MAX_MS     300000U         /**< Backoff máximo entre tentativas. */
+#define WIFI_CONNECT_GUARD_MS   12000U          /**< Janela de guarda após transições. */
+#define WIFI_CONNECT_TIMEOUT_MS 20000U          /**< Timeout de `connect_timeout_ms`. */
+#define WIFI_TICK_PERIOD_MS     100U            /**< Período de varredura da task. */
 
 static bool s_ntp_synced_once = false;
 
@@ -30,8 +38,16 @@ static uint32_t g_backoff_ms = 0;
 static int g_prev_link = -999;
 static uint32_t g_attempt = 0;
 
+/**
+ * @brief Timestamp corrente em milissegundos desde o boot.
+ */
 static inline uint32_t now_ms(void) { return to_ms_since_boot(get_absolute_time()); }
 
+/**
+ * @brief Converte o status do link para string amigável.
+ * @param st Código retornado por `cyw43_tcpip_link_status`.
+ * @return Cadeia constante com a descrição do estado.
+ */
 static const char *link_status_str(int st)
 {
     switch (st)
@@ -55,12 +71,18 @@ static const char *link_status_str(int st)
     }
 }
 
+/**
+ * @brief Loga o IP atual obtido por DHCP.
+ */
 static void log_current_ip(void)
 {
     uint8_t *b = (uint8_t *)&cyw43_state.netif[0].ip_addr.addr;
     LOG(TAG, "IP adquirido: %u.%u.%u.%u", b[0], b[1], b[2], b[3]);
 }
 
+/**
+ * @brief Loga o RSSI se disponível.
+ */
 static void log_rssi_if_available(void)
 {
     int rssi = cyw43_wifi_get_rssi(&cyw43_state, CYW43_ITF_STA);
@@ -71,6 +93,9 @@ static void log_rssi_if_available(void)
     }
 }
 
+/**
+ * @brief Atualiza o estado do link e executa ações associadas a transições.
+ */
 static void update_link_state(void)
 {
     int st = cyw43_tcpip_link_status(&cyw43_state, CYW43_ITF_STA);
@@ -113,6 +138,9 @@ static void update_link_state(void)
     }
 }
 
+/**
+ * @brief Tenta conectar uma vez com timeout definido.
+ */
 static void try_connect_once(void)
 {
     if (!g_arch_ok || g_ssid[0] == '\0')
@@ -138,6 +166,11 @@ static void try_connect_once(void)
     }
 }
 
+/**
+ * @brief Inicializa o módulo Wi‑Fi (cyw43) e configura STA com SSID/senha.
+ * @param ssid SSID da rede.
+ * @param pass Senha da rede.
+ */
 void wifi_manager_init(const char *ssid, const char *pass)
 {
     strncpy(g_ssid, ssid ? ssid : "", sizeof(g_ssid) - 1);
@@ -168,11 +201,20 @@ void wifi_manager_init(const char *ssid, const char *pass)
     LOG(TAG, "Init OK (STA). SSID=\"%s\" (threadsafe_background)", g_ssid);
 }
 
+/**
+ * @brief Informa se está conectado (link UP com IP).
+ * @return true se conectado; false caso contrário.
+ */
 bool wifi_manager_is_connected(void)
 {
     return g_connected;
 }
 
+/**
+ * @brief Bloqueia até a conexão subir ou o timeout expirar.
+ * @param timeout_ms Tempo máximo (ms).
+ * @return true se conectou; false em timeout.
+ */
 bool wifi_manager_wait_connected(uint32_t timeout_ms)
 {
     LOG(TAG, "Esperando conexão por até %u ms...", (unsigned)timeout_ms);
@@ -192,6 +234,9 @@ bool wifi_manager_wait_connected(uint32_t timeout_ms)
     return true;
 }
 
+/**
+ * @brief Força reabertura imediata da janela de reconexão (zera backoff).
+ */
 void wifi_manager_force_reconnect(void)
 {
     LOG(TAG, "force_reconnect(): zerando backoff e reabrindo janela");
@@ -200,6 +245,10 @@ void wifi_manager_force_reconnect(void)
     g_next_try_ms = 0;
 }
 
+/**
+ * @brief Task do gerenciador Wi‑Fi: tenta conectar e acompanha transições.
+ * @param params Não utilizado.
+ */
 void wifi_manager_task(void *params)
 {
     (void)params;
@@ -259,6 +308,10 @@ void wifi_manager_task(void *params)
     }
 }
 
+/**
+ * @brief Retorna o IP local em string (formato decimal pontuado).
+ * @return Ponteiro para buffer estático interno.
+ */
 const char *wifi_manager_ip_str(void)
 {
     static char ipbuf[20];

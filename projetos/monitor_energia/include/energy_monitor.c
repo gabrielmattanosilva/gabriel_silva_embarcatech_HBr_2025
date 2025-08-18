@@ -1,3 +1,12 @@
+/**
+ * @file energy_monitor.c
+ * @brief Cálculo de Vrms, Irms, potência instantânea e tensão por unidade (PU).
+ * @details
+ *  Executa uma task periódica que amostra dois canais do ADS1115 (tensão e corrente),
+ *  acumula amostras, calcula valores RMS e publica o último resultado via
+ *  `energy_monitor_get_last()`. Amostragem nominal: 200 Hz por ~1 s (128 amostras).
+ */
+
 #include "energy_monitor.h"
 #include <math.h>
 #include "pico/stdlib.h"
@@ -8,19 +17,19 @@
 
 #define TAG "energy_monitor"
 
-#define NUM_SAMPLES     128U
-#define SAMPLE_RATE_HZ  200U
-#define CYCLE_PERIOD_MS 1000U
+#define NUM_SAMPLES     128U               /**< Número de amostras por canal. */
+#define SAMPLE_RATE_HZ  200U               /**< Taxa de amostragem por canal (Hz). */
+#define CYCLE_PERIOD_MS 1000U              /**< Período da task (ms). */
 
-#define LSB_4_096V (4.096f / 32768.0f)
+#define LSB_4_096V (4.096f / 32768.0f)     /**< Tamanho do LSB na faixa ±4.096V. */
 
-#define VOLT_DC_OFFSET 1.50f
-#define CURR_DC_OFFSET 1.65f
+#define VOLT_DC_OFFSET 1.50f               /**< Offset DC do canal de tensão (V). */
+#define CURR_DC_OFFSET 1.65f               /**< Offset DC do canal de corrente (V). */
 
-#define VOLT_CONV_FACTOR 301.15f
-#define CURR_CONV_FACTOR 54.87f
+#define VOLT_CONV_FACTOR 301.15f           /**< Fator V_adc->V_real. */
+#define CURR_CONV_FACTOR 54.87f            /**< Fator V_adc->I_real (A/V). */
 
-#define VBASE_RMS 127.00f
+#define VBASE_RMS 127.00f                  /**< Base de tensão para PU (127 Vrms). */
 
 static int16_t buffer_ch0[NUM_SAMPLES];
 static int16_t buffer_ch1[NUM_SAMPLES];
@@ -30,6 +39,12 @@ static uint32_t timestamps_ch1[NUM_SAMPLES];
 static energy_monitor_data_t g_last = {0};
 static volatile bool g_last_valid = false;
 
+/**
+ * @brief Obtém a última medição calculada pela task.
+ * @param[out] out Estrutura preenchida com os últimos valores.
+ * @return true se havia dados válidos; false caso contrário.
+ * @note Acesso protegido por seção crítica para consistência.
+ */
 bool energy_monitor_get_last(energy_monitor_data_t *out)
 {
     if (!out || !g_last_valid)
@@ -40,6 +55,11 @@ bool energy_monitor_get_last(energy_monitor_data_t *out)
     return true;
 }
 
+/**
+ * @brief Task FreeRTOS de monitoramento de energia (amostragem e cálculo).
+ * @param params Parâmetro opcional (não utilizado).
+ * @note A amostragem alterna AIN0 e AIN1 em modo single-shot.
+ */
 void energy_monitor_task(void *params)
 {
     (void)params;

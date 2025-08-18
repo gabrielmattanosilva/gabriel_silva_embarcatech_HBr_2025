@@ -1,3 +1,13 @@
+/**
+ * @file main.c
+ * @brief Ponto de entrada: cria tasks (Wi‑Fi, EnergyMonitor, ThingSpeak) e inicia o scheduler.
+ * @details
+ *  Inicializa subsistemas (stdio/logger/RTC/ADS1115/Wi‑Fi) e agenda as tasks:
+ *   - WiFiManagerTask: gerencia conexão e NTP
+ *   - EnergyMonitorTask: amostra e calcula RMS/PU/Pinst
+ *   - ThingSpeakTask: acumula energia e envia telemetria
+ */
+
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "FreeRTOS.h"
@@ -10,17 +20,23 @@
 #include "wifi_manager.h"
 #include "thingspeak.h"
 
+/**
+ * @brief Função principal do firmware.
+ * @return 0 (nunca retorna após `vTaskStartScheduler`).
+ */
 int main(void)
 {
+    /* Inicialização periféricos */
     stdio_init_all();
     logger_init();
     rtc_ntp_init();
     ads1115_init();
     wifi_manager_init(SSID, PASSWORD);
 
+    /* Criação das tarefas */
     xTaskCreate(
         wifi_manager_task,
-        "WiFi Manager Task",
+        "WiFiManagerTask",
         2048,
         NULL,
         tskIDLE_PRIORITY + 2,
@@ -28,7 +44,7 @@ int main(void)
 
     xTaskCreate(
         energy_monitor_task,
-        "Energy Monitor Task",
+        "EnergyMonitorTask",
         2048,
         NULL,
         tskIDLE_PRIORITY + 1,
@@ -42,6 +58,7 @@ int main(void)
         tskIDLE_PRIORITY + 1,
         NULL);
 
+    /* Inicialização do escalonador */
     vTaskStartScheduler();
 
     while (true)

@@ -1,3 +1,8 @@
+/**
+ * @file wifi_manager.h
+ * @brief API de gerenciamento de conexão Wi‑Fi (cyw43).
+ */
+
 #ifndef WIFI_MANAGER_H
 #define WIFI_MANAGER_H
 

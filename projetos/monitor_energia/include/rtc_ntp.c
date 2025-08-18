@@ -1,3 +1,11 @@
+/**
+ * @file rtc_ntp.c
+ * @brief Sincronização do RTC interno via NTP usando lwIP (UDP).
+ * @details
+ *  Envia um pacote NTP, aguarda resposta e ajusta o RTC do RP2040.
+ *  Converte o tempo NTP (base 1900) para `datetime_t` local com fuso.
+ */
+
 #include "rtc_ntp.h"
 #include <string.h>
 #include <inttypes.h>
@@ -14,15 +22,26 @@
 
 #define TAG "rtc_ntp"
 
-#define NTP_PORT                    123U
-#define NTP_PKT_LEN                 48U
-#define RTC_NTP_TZ_OFFSET_SECONDS   (-3U * 3600U)
+#define NTP_PORT                    123U            /**< Porta UDP do NTP. */
+#define NTP_PKT_LEN                 48U             /**< Tamanho do pacote NTP. */
+#define RTC_NTP_TZ_OFFSET_SECONDS   (-3U * 3600U)   /**< Offset de fuso (ex.: -3h). */
 
+/**
+ * @brief Testa se o ano é bissexto.
+ * @param y Ano (ex.: 2025).
+ * @return true se bissexto; false caso contrário.
+ */
 static inline bool is_leap(int y)
 {
     return ((y % 4 == 0) && (y % 100 != 0)) || (y % 400 == 0);
 }
 
+/**
+ * @brief Dias no mês para o ano dado (considera bissexto).
+ * @param y Ano.
+ * @param m Mês [1..12].
+ * @return Dias no mês.
+ */
 static int dim(int y, int m)
 {
     static const int d[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
@@ -30,6 +49,13 @@ static int dim(int y, int m)
     return (m == 2 && is_leap(y)) ? 29 : x;
 }
 
+/**
+ * @brief Converte segundos NTP (base 1900) para `datetime_t` local com fuso.
+ * @param ntp_sec Segundos desde 1900-01-01 00:00:00.
+ * @param tz_offset_seconds Offset de fuso em segundos (pode ser negativo).
+ * @param[out] out Estrutura de saída preenchida.
+ * @return true se conversão bem-sucedida; false caso contrário.
+ */
 static bool ntpsec_to_datetime_local(uint32_t ntp_sec, int32_t tz_offset_seconds, datetime_t *out)
 {
     if (!out)
@@ -94,18 +120,27 @@ static bool ntpsec_to_datetime_local(uint32_t ntp_sec, int32_t tz_offset_seconds
     return true;
 }
 
+/**
+ * @brief Lê um u32 big-endian de buffer de bytes.
+ * @param b Ponteiro para 4 bytes.
+ * @return Valor de 32 bits.
+ */
 static uint32_t rd_be_u32(const uint8_t *b)
 {
     return ((uint32_t)b[0] << 24) | ((uint32_t)b[1] << 16) | ((uint32_t)b[2] << 8) | ((uint32_t)b[3]);
 }
 
+/** @brief Contexto interno para operação NTP assíncrona (UDP). */
 typedef struct
 {
-    SemaphoreHandle_t sem;
-    bool ok;
-    uint32_t ntp_sec;
+    SemaphoreHandle_t sem;  /**< Semáforo para sinalização de resposta. */
+    bool ok;                /**< Flag de sucesso ao receber pacote válido. */
+    uint32_t ntp_sec;       /**< Segundos NTP recebidos (campo transmit time). */
 } ntp_ctx_t;
 
+/**
+ * @brief Callback de recepção UDP do NTP.
+ */
 static void ntp_recv_cb(void *arg, struct udp_pcb *upcb, struct pbuf *p,
                         const ip_addr_t *addr, u16_t port)
 {
@@ -133,6 +168,9 @@ static void ntp_recv_cb(void *arg, struct udp_pcb *upcb, struct pbuf *p,
     xSemaphoreGive(ctx->sem);
 }
 
+/**
+ * @brief Inicializa o RTC com base 1900-01-01 (base do NTP).
+ */
 void rtc_ntp_init(void)
 {
     rtc_init();
@@ -144,6 +182,12 @@ void rtc_ntp_init(void)
     LOG(TAG, "RTC inicializado para 1900/01/01 00:00:00.000 (base NTP)");
 }
 
+/**
+ * @brief Sincroniza o RTC consultando um servidor NTP (UDP).
+ * @param server_host Hostname do servidor (ex.: "pool.ntp.org").
+ * @param timeout_ms Timeout total para aguardar resposta.
+ * @return true em caso de sucesso; false em erros/timeout.
+ */
 bool rtc_ntp_sync(const char *server_host, uint32_t timeout_ms)
 {
     if (!server_host)

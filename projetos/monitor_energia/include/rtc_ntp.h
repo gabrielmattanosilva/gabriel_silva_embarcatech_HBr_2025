@@ -1,3 +1,8 @@
+/**
+ * @file rtc_ntp.h
+ * @brief API de sincronização do RTC via NTP.
+ */
+
 #ifndef RTC_NTP_H
 #define RTC_NTP_H
 

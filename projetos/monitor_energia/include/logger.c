@@ -1,3 +1,10 @@
+/**
+ * @file logger.c
+ * @brief Logger simples com timestamp e mutex opcional (FreeRTOS).
+ * @details
+ *  Encapsula `printf` com marcação de tempo (RTC) e proteção por mutex.
+ */
+
 #include "logger.h"
 #include <stdio.h>
 #include <stdarg.h>
@@ -8,11 +15,20 @@
 
 static SemaphoreHandle_t s_mutex = NULL;
 
+/**
+ * @brief Indica se o escalonador do FreeRTOS já foi iniciado.
+ * @return Diferente de zero se iniciado; zero caso contrário.
+ */
 static inline int scheduler_started(void)
 {
     return xTaskGetSchedulerState() != taskSCHEDULER_NOT_STARTED;
 }
 
+/**
+ * @brief Formata timestamp (data/hora + milissegundo) no buffer fornecido.
+ * @param[out] buf Buffer de saída.
+ * @param buflen Tamanho do buffer.
+ */
 static void format_timestamp(char *buf, size_t buflen)
 {
     datetime_t dt;
@@ -23,6 +39,9 @@ static void format_timestamp(char *buf, size_t buflen)
              dt.year, dt.month, dt.day, dt.hour, dt.min, dt.sec, msec);
 }
 
+/**
+ * @brief Inicializa o logger, criando o mutex de proteção.
+ */
 void logger_init(void)
 {
     if (!s_mutex)
@@ -31,6 +50,11 @@ void logger_init(void)
     }
 }
 
+/**
+ * @brief Escreve uma linha de log formatada com timestamp e tag.
+ * @param tag Cadeia de identificação do módulo (ou NULL).
+ * @param fmt Formato `printf` seguido dos respectivos argumentos variádicos.
+ */
 void logger_log(const char *tag, const char *fmt, ...)
 {
     char ts[32];

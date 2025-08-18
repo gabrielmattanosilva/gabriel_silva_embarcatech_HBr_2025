@@ -1,3 +1,8 @@
+/**
+ * @file utils.c
+ * @brief Utilitários diversos (DNS com lwIP).
+ */
+
 #include "utils.h"
 #include "lwip/dns.h"
 #include "lwip/ip4_addr.h"
@@ -7,6 +12,12 @@
 
 #define TAG "utils"
 
+/**
+ * @brief Callback interno de resolução DNS (lwIP).
+ * @param name Host solicitado.
+ * @param ipaddr Resultado (se sucesso).
+ * @param arg Contexto com semáforo e destino de IP.
+ */
 static void dns_cb(const char *name, const ip_addr_t *ipaddr, void *arg)
 {
     (void)name;
@@ -31,6 +42,14 @@ static void dns_cb(const char *name, const ip_addr_t *ipaddr, void *arg)
     xSemaphoreGive(ctx->sem);
 }
 
+/**
+ * @brief Resolve um hostname para endereço IPv4 usando lwIP DNS.
+ * @param hostname Nome do host (ex.: "api.thingspeak.com").
+ * @param[out] out_ip Endereço IPv4 de saída.
+ * @param timeout_ms Tempo máximo de espera (ms).
+ * @return true em sucesso; false em timeout/erro.
+ * @note Define o DNS primário como 8.8.8.8 antes de resolver.
+ */
 bool utils_resolve_dns(const char *hostname, ip_addr_t *out_ip, uint32_t timeout_ms)
 {
     if (!hostname || !out_ip)

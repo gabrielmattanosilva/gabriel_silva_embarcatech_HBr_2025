@@ -1,3 +1,11 @@
+/**
+ * @file thingspeak.c
+ * @brief Envio de leituras ao ThingSpeak usando TCP bruto (lwIP).
+ * @details
+ *  Oferece `thingspeak_send()` para montar uma requisição HTTP GET e
+ *  `thingspeak_task()` que acumula energia e envia periodicamente.
+ */
+
 #include "thingspeak.h"
 #include <stdarg.h>
 #include <string.h>
@@ -13,10 +21,11 @@
 #include "credentials.h"
 #include "logger.h"
 
-#define THINGSPEAK_HOST             "api.thingspeak.com"
-#define THINGSPEAK_PORT             80
-#define THINGSPEAK_TCP_TIMEOUT_MS   7000U
+#define THINGSPEAK_HOST             "api.thingspeak.com"    /**< Host do ThingSpeak. */
+#define THINGSPEAK_PORT             80                      /**< Porta HTTP. */
+#define THINGSPEAK_TCP_TIMEOUT_MS   7000U                   /**< Timeout de resposta TCP (ms). */
 
+/** @brief Contexto interno para operação HTTP simples sobre TCP. */
 typedef struct
 {
     struct tcp_pcb *pcb;
@@ -26,17 +35,29 @@ typedef struct
     int finished;
 } ts_http_ctx_t;
 
+/**
+ * @brief Retorna o uptime do sistema em segundos.
+ * @return Segundos desde o boot.
+ */
 static inline uint32_t uptime_s(void)
 {
     return (uint32_t)(to_ms_since_boot(get_absolute_time()) / 1000u);
 }
 
+/**
+ * @brief Zera acumuladores de energia/tempo de 10 min.
+ * @param e10_wh Ponteiro para energia acumulada (Wh).
+ * @param acc_s Ponteiro para acumulador de tempo (s).
+ */
 static inline void reset_e10_wh_acc_s(double *e10_wh, uint32_t *acc_s)
 {
     *e10_wh = 0.0;
     *acc_s = 0u;
 }
 
+/**
+ * @brief Callback de recepção TCP (HTTP/1.1 Connection: close).
+ */
 static err_t thingspeak_tcp_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
 {
     ts_http_ctx_t *ctx = (ts_http_ctx_t *)arg;
@@ -56,6 +77,9 @@ static err_t thingspeak_tcp_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p
     return ERR_OK;
 }
 
+/**
+ * @brief Callback de erro TCP.
+ */
 static void thingspeak_tcp_err(void *arg, err_t err)
 {
     ts_http_ctx_t *ctx = (ts_http_ctx_t *)arg;
@@ -68,6 +92,9 @@ static void thingspeak_tcp_err(void *arg, err_t err)
     }
 }
 
+/**
+ * @brief Callback de confirmação de envio TCP.
+ */
 static err_t thingspeak_tcp_sent(void *arg, struct tcp_pcb *tpcb, u16_t len)
 {
     (void)arg;
@@ -76,6 +103,9 @@ static err_t thingspeak_tcp_sent(void *arg, struct tcp_pcb *tpcb, u16_t len)
     return ERR_OK;
 }
 
+/**
+ * @brief Callback de conexão estabelecida TCP.
+ */
 static err_t thingspeak_tcp_connected(void *arg, struct tcp_pcb *tpcb, err_t err)
 {
     ts_http_ctx_t *ctx = (ts_http_ctx_t *)arg;
@@ -96,6 +126,13 @@ static err_t thingspeak_tcp_connected(void *arg, struct tcp_pcb *tpcb, err_t err
     return ERR_OK;
 }
 
+/**
+ * @brief Envia campos ao ThingSpeak (GET /update) com API key e até 8 campos numéricos.
+ * @param api_key Chave de escrita do canal.
+ * @param num_fields Quantidade de campos (1..8).
+ * @param ... Lista de valores `double` (field1..fieldN).
+ * @note NaN/Inf são convertidos para 0.0.
+ */
 void thingspeak_send(const char *api_key, uint8_t num_fields, ...)
 {
     if (!api_key || num_fields <= 0 || num_fields > 8)
@@ -228,6 +265,13 @@ void thingspeak_send(const char *api_key, uint8_t num_fields, ...)
     LOG("ThingSpeak", "Enviado para %s (%d bytes)", THINGSPEAK_HOST, nreq);
 }
 
+/**
+ * @brief Task que acumula energia e envia leituras ao ThingSpeak.
+ * @param params Não utilizado.
+ * @details
+ *  Envia imediatamente após o Wi-Fi ficar UP, depois a cada
+ *  `THINGSPEAK_SEND_PERIOD_S` enquanto conectado.
+ */
 void thingspeak_task(void *params)
 {
     (void)params;
