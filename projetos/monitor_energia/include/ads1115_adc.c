@@ -2,6 +2,11 @@
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
 
+#define I2C_PORT        i2c0
+#define SDA_PIN         0U
+#define SCL_PIN         1U
+#define ADS1115_ADDR    0x48
+
 void ads1115_init(void)
 {
     i2c_init(I2C_PORT, 100 * 1000);
