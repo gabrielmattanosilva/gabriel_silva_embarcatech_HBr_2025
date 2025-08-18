@@ -1,8 +1,8 @@
 #ifndef CREDENTIALS_H
 #define CREDENTIALS_H
 
-#define SSID "marcioalex"
-#define PASSWORD "71@Marale"
-#define API_KEY "ABCDEFG123456789"
+#define SSID "gabriel"
+#define PASSWORD "bitdoglab"
+#define API_KEY "8VOH1ZEK7QDL1CCI"
 
 #endif // CREDENTIALS_H

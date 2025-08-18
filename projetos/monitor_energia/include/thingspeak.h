@@ -1,17 +1,31 @@
 #ifndef THINGSPEAK_H
 #define THINGSPEAK_H
 
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include "lwip/dns.h"
-#include "lwip/pbuf.h"
-#include "lwip/tcp.h"
-#include "pico/stdlib.h"
+#include <stdint.h>
 
-/* Envia fields ao ThingSpeak (usa utils_resolve_dns internamente). */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* ===== Configurações da janela/período ===== */
+#ifndef THINGSPEAK_SEND_PERIOD_S
+#define THINGSPEAK_SEND_PERIOD_S   60u   /* 10 min */
+#endif
+
+#ifndef THINGSPEAK_TICK_S
+#define THINGSPEAK_TICK_S          1u     /* integração a cada 1s (via dt real) */
+#endif
+
+#define THINGSPEAK_HOST "api.thingspeak.com"
+
+/* Sua função já existente (NÃO altere a implementação) */
 void send_to_thingspeak(const char *api_key, int num_fields, ...);
 
-#endif // THINGSPEAK_H
+/* Nova Task (implementar em thingspeak.c) */
+void thingspeak_task(void *params);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* THINGSPEAK_H */
