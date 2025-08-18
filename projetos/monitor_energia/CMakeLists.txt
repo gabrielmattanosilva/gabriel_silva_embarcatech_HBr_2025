@@ -12,7 +12,7 @@ if (EXISTS ${picoVscode})
     include(${picoVscode})
 endif()
 # ====================================================================================
-set(PICO_BOARD pico CACHE STRING "Board type")
+set(PICO_BOARD pico_w CACHE STRING "Board type")
 
 cmake_minimum_required(VERSION 3.12)
 
@@ -40,6 +40,13 @@ pico_sdk_init()
 
 add_executable(${ProjectName}
     ./src/main.c
+    ./include/ads1115_adc.c
+    ./include/energy_monitor.c
+    ./include/wifi_manager.c
+    ./include/rtc_ntp.c
+    ./include/thingspeak.c
+    ./include/logger.c
+    ./include/utils.c
 )
 
 target_include_directories(${ProjectName} PRIVATE
@@ -49,12 +56,14 @@ target_include_directories(${ProjectName} PRIVATE
 
 target_link_libraries(${ProjectName}
     pico_stdlib
+    pico_stdio_usb
+    pico_cyw43_arch_lwip_threadsafe_background
     FreeRTOS-Kernel-Heap4
     hardware_adc
     hardware_dma
     hardware_irq
     hardware_i2c
-    pico_stdio_usb
+    hardware_rtc
     )
 
 pico_add_extra_outputs(${ProjectName})
