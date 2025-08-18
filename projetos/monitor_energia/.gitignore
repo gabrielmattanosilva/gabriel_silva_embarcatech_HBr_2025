@@ -1,2 +1,3 @@
 build
 monitor_energia.txt
+/include/credentials.h
