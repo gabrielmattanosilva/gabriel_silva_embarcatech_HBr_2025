@@ -40,7 +40,7 @@ pico_sdk_init()
 
 add_executable(${ProjectName}
     ./src/main.c
-    ./lib/ads1115_adc.c
+    ./lib/ads1115_adc_wrapper.c
     ./lib/energy_monitor.c
     ./lib/wifi_manager.c
     ./lib/rtc_ntp.c
