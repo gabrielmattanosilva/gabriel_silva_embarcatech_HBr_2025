@@ -7,13 +7,13 @@
  *  `energy_monitor_get_last()`. Amostragem nominal: 200 Hz por ~1 s (128 amostras).
  */
 
-#include "energy_monitor.h"
+#include "lib/energy_monitor.h"
 #include <math.h>
 #include "pico/stdlib.h"
 #include "FreeRTOS.h"
 #include "task.h"
-#include "ads1115_adc.h"
-#include "logger.h"
+#include "lib/ads1115_adc.h"
+#include "lib/logger.h"
 
 #define TAG "energy_monitor"
 

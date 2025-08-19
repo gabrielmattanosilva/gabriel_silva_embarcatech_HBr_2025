@@ -6,7 +6,7 @@
  *  Converte o tempo NTP (base 1900) para `datetime_t` local com fuso.
  */
 
-#include "rtc_ntp.h"
+#include "lib/rtc_ntp.h"
 #include <string.h>
 #include <inttypes.h>
 #include "pico/stdlib.h"
@@ -18,7 +18,7 @@
 #include "FreeRTOS.h"
 #include "semphr.h"
 #include "utils.h"
-#include "logger.h"
+#include "lib/logger.h"
 
 #define TAG "rtc_ntp"
 

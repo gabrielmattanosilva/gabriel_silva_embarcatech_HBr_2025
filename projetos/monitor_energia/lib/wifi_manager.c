@@ -6,13 +6,13 @@
  *  quando a conexão sobe, sincroniza o RTC via NTP uma vez.
  */
 
-#include "wifi_manager.h"
+#include "lib/wifi_manager.h"
 #include <string.h>
 #include "pico/cyw43_arch.h"
 #include "FreeRTOS.h"
 #include "task.h"
-#include "rtc_ntp.h"
-#include "logger.h"
+#include "lib/rtc_ntp.h"
+#include "lib/logger.h"
 
 #define TAG "wifi_manager"
 

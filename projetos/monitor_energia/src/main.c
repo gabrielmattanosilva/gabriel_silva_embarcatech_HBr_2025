@@ -12,13 +12,13 @@
 #include "pico/stdlib.h"
 #include "FreeRTOS.h"
 #include "task.h"
-#include "logger.h"
-#include "rtc_ntp.h"
-#include "ads1115_adc.h"
-#include "energy_monitor.h"
+#include "lib/logger.h"
+#include "lib/rtc_ntp.h"
+#include "lib/ads1115_adc.h"
+#include "lib/energy_monitor.h"
 #include "credentials.h"
-#include "wifi_manager.h"
-#include "thingspeak.h"
+#include "lib/wifi_manager.h"
+#include "lib/thingspeak.h"
 
 /**
  * @brief Função principal do firmware.

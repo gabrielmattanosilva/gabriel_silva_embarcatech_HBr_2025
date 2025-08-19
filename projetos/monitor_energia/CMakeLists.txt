@@ -40,13 +40,13 @@ pico_sdk_init()
 
 add_executable(${ProjectName}
     ./src/main.c
-    ./include/ads1115_adc.c
-    ./include/energy_monitor.c
-    ./include/wifi_manager.c
-    ./include/rtc_ntp.c
-    ./include/thingspeak.c
-    ./include/logger.c
-    ./include/utils.c
+    ./lib/ads1115_adc.c
+    ./lib/energy_monitor.c
+    ./lib/wifi_manager.c
+    ./lib/rtc_ntp.c
+    ./lib/thingspeak.c
+    ./lib/logger.c
+    ./lib/utils.c
 )
 
 target_include_directories(${ProjectName} PRIVATE

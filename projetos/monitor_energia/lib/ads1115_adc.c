@@ -7,7 +7,7 @@
  *  As rotinas utilizam a API `i2c_*` do Pico SDK.
  */
 
-#include "ads1115_adc.h"
+#include "lib/ads1115_adc.h"
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
 

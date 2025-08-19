@@ -6,7 +6,7 @@
  *  `thingspeak_task()` que acumula energia e envia periodicamente.
  */
 
-#include "thingspeak.h"
+#include "lib/thingspeak.h"
 #include <stdarg.h>
 #include <string.h>
 #include <math.h>
@@ -16,10 +16,10 @@
 #include "FreeRTOS.h"
 #include "semphr.h"
 #include "utils.h"
-#include "energy_monitor.h"
-#include "wifi_manager.h"
+#include "lib/energy_monitor.h"
+#include "lib/wifi_manager.h"
 #include "credentials.h"
-#include "logger.h"
+#include "lib/logger.h"
 
 #define THINGSPEAK_HOST             "api.thingspeak.com"    /**< Host do ThingSpeak. */
 #define THINGSPEAK_PORT             80                      /**< Porta HTTP. */

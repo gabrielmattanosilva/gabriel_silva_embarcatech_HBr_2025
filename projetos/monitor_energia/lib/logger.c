@@ -5,7 +5,7 @@
  *  Encapsula `printf` com marcação de tempo (RTC) e proteção por mutex.
  */
 
-#include "logger.h"
+#include "lib/logger.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include "pico/stdlib.h"
