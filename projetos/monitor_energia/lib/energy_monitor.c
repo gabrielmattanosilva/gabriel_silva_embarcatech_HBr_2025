@@ -48,7 +48,10 @@ static volatile bool g_last_valid = false;
 bool energy_monitor_get_last(energy_monitor_data_t *out)
 {
     if (!out || !g_last_valid)
+    {
         return false;
+    }
+
     taskENTER_CRITICAL();
     *out = g_last;
     taskEXIT_CRITICAL();
